@@ -1,0 +1,272 @@
+<?php
+
+if (!defined('__DIR__')) {define('__DIR__', dirname(__FILE__));}
+require_once __DIR__ . '/webform_youmove.admin.inc';
+
+
+
+function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
+
+  /************************/
+  /***** YouMove Part *****/
+  /************************/
+
+  $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+  
+  if ($form_id !== 'webform_client_form_'.$ymw_ID) return;
+
+  $settings = variable_get('webform_youmove__ymw_settings'); 
+
+  if(user_is_logged_in()) {
+    //Disable section with user creation fields, 
+    //because user is already logged
+    //$contact_types = variable_get('webform_youmove__ymw_contact_types',null);
+    //$contact_type_indicator = $settings['contact_type_ID'];
+    //_set_webform_component($contact_type_indicator,$form,'#attributes',array('disabled' => '1'));
+    
+    //foreach($contact_types as $contact_type) {
+      $fieldset_id = $settings['contact__fieldset_id'];
+      _set_webform_component($fieldset_id,$form,'#attributes',array('disabled' => '1'));
+    //}
+
+  } else {
+    $form['#validate'][] = '_ymw_user_exists_validate';
+  }
+   
+  //Disable some webform fields while edition 
+  //(so webform submission already exists) 
+  //and option 'ready to publish' is checked (value=1) 
+  if($form['#submission']) {
+    $is_published_field_ID = $settings['published_ID'];
+
+    // Get field (option 'ready to publish') value from submission
+    $components = $form['#node']->webform['components'];
+    $data = $form['#submission']->data;
+    $field_key_index = NULL;
+
+    foreach ($components as $key => $component) {
+      if($component['form_key'] == $is_published_field_ID) {
+          $field_key_index = $key;
+          break;
+      }
+    }
+    foreach ($data as $key => $values) {
+      if($key == $field_key_index) {
+        $is_published_field_value = (isset($values[0])) ? $values[0] : NULL;
+        break;
+      }
+    }
+
+    //Disable special fields
+    if($is_published_field_value){
+      //Set disabled publishing field
+      _set_webform_component($is_published_field_ID,$form,'#attributes',array('disabled' => '1'));
+
+      //Set disabled field keys
+      $fields = explode(',',variable_get('webform_youmove__ymw_settings')['disabled_fields']);
+      foreach($fields as $field) {
+        _set_webform_component($field,$form,'#attributes',array('disabled' => '1')); 
+      }    
+    }
+  }
+}
+
+
+function webform_youmove_webform_submission_presave($node,&$submission) {
+
+  /************************/
+  /***** YouMove Part *****/
+  /************************/
+
+  /***** Create new user based on webform *****/
+  if(user_is_logged_in()) return;
+
+  $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+  $user = variable_get('webform_youmove_user_temp',NULL);
+
+  if($node->nid == $ymw_ID && !empty($user)) {
+    try {
+      //Create user from webform submission (with roles)
+      $role_name = variable_get('webform_youmove__ymw_user_role_name');
+      $role = user_role_load_by_name($role_name); 
+      $rid = $role->rid;
+
+             
+      $account = _user_create($user['name'],$user['mail'],array($rid => $role_name));
+      variable_del('webform_youmove_user_temp');
+
+      //Set permission to webform submission
+      $submission->uid = $account->uid;
+
+    } catch(Exception $e) {
+      drupal_set_message(t('Some errors accured, please contact with system administrator'),'error');
+      watchdog('webform_youmove::webform_youmove_webform_submission_presave()', $e->getMessage(),null, WATCHDOG_ERROR);
+    }
+  }
+}
+
+
+function webform_youmove_webform_submission_render_alter(&$renderable){
+  $settings = variable_get('webform_youmove__ymw_settings');
+
+  //Hide configured field keys
+  $fields = explode(',',variable_get('webform_youmove__ymw_settings')['hidden_fields']);
+  foreach($fields as $field) {
+    _set_webform_component($field,$renderable,'#access',FALSE);
+  }
+}
+
+
+function webform_youmove_mail($key, &$message, $params) {
+  
+  $language = $message['language'];
+  $variables = array('user' => $params['account']);
+
+  //$message['subject'] .= _user_mail_text($key . '_subject', $language,$variables);
+  $subject = variable_get('user_mail_' . $key . '_subject', FALSE);
+  $subject_t =  t($subject, array(), array('langcode' => $language->language));
+  $message['subject'] .= token_replace($subject_t, $variables, array('language' => $language, 'callback' => 'user_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE)); 
+
+  //$message['body'][] = _user_mail_text($key . '_body', $language, $variables);
+  $text = variable_get('user_mail_' . $key . '_body', FALSE);
+  $text_t = t($text, array(), array('langcode' => $language->language));
+  $message['body'][] = token_replace($text_t, $variables, array('language' => $language, 'callback' => 'user_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE));
+
+}
+
+function webform_youmove_menu_alter(&$items) {
+  $items['node/%webform_menu/submission/%webform_menu_submission']['page callback'] = 'webform_youmove_webform_submission_view_page';
+  $items['node/%webform_menu/submission/%webform_menu_submission/edit']['page callback'] = 'webform_youmove_webform_submission_edit_page';
+}
+
+function webform_youmove_webform_submission_view_page($node, $submission, $format) {
+
+  $return_value = webform_submission_page($node, $submission, $format);
+  $settings = variable_get('webform_youmove__ymw_settings');
+
+  if(isset($settings['submission_view_title'])){drupal_set_title(t($settings['submission_view_title']));}
+  return $return_value;
+}
+
+function webform_youmove_webform_submission_edit_page($node, $submission, $format) {
+
+  $return_value = webform_submission_page($node, $submission, $format);
+  $settings = variable_get('webform_youmove__ymw_settings');
+
+  if(isset($settings['submission_edit_title'])){drupal_set_title(t($settings['submission_edit_title']));}
+  return $return_value;
+}
+
+function _ymw_user_exists_validate(&$form, &$form_state) {
+
+ //Check if contact type already submitted
+ //$contact_type_indicator = variable_get('webform_youmove__ymw_settings')['contact_type_ID'];
+
+ try {
+   $settings = variable_get('webform_youmove__ymw_settings');
+   $submission_values = $form_state['input']['submitted'];
+
+   if(isset($settings) && isset($submission_values)) {
+     //$contact_type = _ymw_check_contact_type($submission_values,$settings,$contact_type_indicator);
+     $name = _get_value_recursive($settings['contact__name_id'],$submission_values);
+     $mail = _get_value_recursive($settings['contact__mail_id'],$submission_values);
+     if(!empty($name) && user_load_by_name($name)) {form_set_error('',t('Contact name already exists in system.'));} 
+     if(!empty($mail) && user_load_by_mail($mail)) {form_set_error('',t('Contact mail already exists in system.'));}          
+     variable_set('webform_youmove_user_temp',array('name'=>$name,'mail'=>$mail));
+
+   }
+ } catch (Exception $e) {
+   drupal_set_message(t('Some errors accured, please contact with system administrator'),'error');
+   watchdog('webform_youmove::_ymw_user_exists_validate()', $e->getMessage(),null, WATCHDOG_ERROR);
+ }  
+
+}
+
+/*
+function _ymw_check_contact_type($submission_values,$contact_types_meta,$contact_type_indicator) {
+
+  $contact_types = variable_get('webform_youmove__ymw_contact_types',null);
+  
+  $contact_type_indicator_value = _get_value_recursive($contact_type_indicator,$submission_values);
+  if(!empty($contact_type_indicator_value)) {
+      foreach($contact_types as $contact_type) {
+        $contact_type_indicator_value_curr = $contact_types_meta[$contact_type]['indicator_value'];
+        if($contact_type_indicator_value_curr == $contact_type_indicator_value) return $contact_type;
+      }
+      throw new Exception('Cannot set contact type: not matched value finded.');
+  } else {
+      throw new Exception('Cannot set contact type: contact type indicator value empty.');
+  }
+  
+}
+*/
+
+
+function _user_create($name,$mail,$roles) {
+  $account = NULL;
+
+  if(!empty($name) && !empty($mail)) {
+      //Get current language as default user language
+      global $language;
+      $password = user_password(8);
+ 
+      $fields = array(
+        'name' => $name,
+        'mail' => $mail,
+        'pass' => $password,
+        'language' => $language->language, 
+        'status' => 1,
+        'init' => 'email address',
+        'roles' => $roles,
+      );
+ 
+      $account = user_save('', $fields);
+      drupal_mail('webform_youmove', 
+                  'register_no_approval_required', 
+                  $mail, 
+                  $language, 
+                  array('account' => $account), 
+                  variable_get('site_mail', 'noreply@example.com'));
+
+      
+      return $account;
+  } else {
+      throw new Exception('Cannot create new user: user name or email empty.');
+  }
+}
+
+
+function _get_value_recursive($key,$values) {
+  foreach($values as $key_value => $value){
+      if($key_value === $key) {return $value;}
+      elseif(is_array($value)) {
+           $r = _get_value_recursive($key,$value);
+           if(isset($r)){return $r;}
+      }
+  }
+  return NULL;
+}
+
+function &_set_webform_component($key,&$values,$attribute_name,$attribute_value) {
+  foreach($values as $key_value => &$value){
+      if($key_value === $key) {
+           if(is_array($values[$key_value][$attribute_name])) {
+             if(is_array($attribute_value)) {
+               $array1 = $values[$key_value][$attribute_name];
+               $values[$key_value][$attribute_name] = array_merge($array1,$attribute_value);
+             } else {
+               $values[$key_value][$attribute_name][] = $attribute_value;
+             }
+             
+           } else {
+             $values[$key_value][$attribute_name] = $attribute_value;
+           }
+           return $values[$key_value];
+      } elseif(is_array($value)) {
+           $r = _set_webform_component($key,$value,$attribute_name,$attribute_value);
+           if(isset($r)){return $r;}
+      }
+  }
+  return NULL;
+}
+
