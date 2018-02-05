@@ -87,12 +87,13 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
   if($node->nid == $ymw_ID && !empty($user)) {
     try {
       //Create user from webform submission (with roles)
+      $settings = variable_get('webform_youmove__ymw_settings');
       $role_name = variable_get('webform_youmove__ymw_user_role_name');
       $role = user_role_load_by_name($role_name); 
       $rid = $role->rid;
 
              
-      $account = _user_create($user['name'],$user['mail'],array($rid => $role_name));
+      $account = _user_create($user['name'],$user['mail'],array($rid =>$role_name),$settings['registration_mail_body']);
       variable_del('webform_youmove_user_temp');
 
       //Set permission to webform submission
@@ -118,19 +119,18 @@ function webform_youmove_webform_submission_render_alter(&$renderable){
 
 
 function webform_youmove_mail($key, &$message, $params) {
-  
   $language = $message['language'];
   $variables = array('user' => $params['account']);
 
-  //$message['subject'] .= _user_mail_text($key . '_subject', $language,$variables);
   $subject = variable_get('user_mail_' . $key . '_subject', FALSE);
   $subject_t =  t($subject, array(), array('langcode' => $language->language));
   $message['subject'] .= token_replace($subject_t, $variables, array('language' => $language, 'callback' => 'user_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE)); 
 
-  //$message['body'][] = _user_mail_text($key . '_body', $language, $variables);
-  $text = variable_get('user_mail_' . $key . '_body', FALSE);
-  $text_t = t($text, array(), array('langcode' => $language->language));
-  $message['body'][] = token_replace($text_t, $variables, array('language' => $language, 'callback' => 'user_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE));
+  $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
+
+  $mail_body = $params['pre_mail_body'];
+  $mail_body_t = t($mail_body, array(), array('langcode' => $language->language));
+  $message['body'][] = token_replace($mail_body_t, $variables , array('language' => $language, 'callback' => 'user_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE));
 
 }
 
@@ -202,17 +202,17 @@ function _ymw_check_contact_type($submission_values,$contact_types_meta,$contact
 */
 
 
-function _user_create($name,$mail,$roles) {
+function _user_create($name,$mail_to,$roles,$mail_body) {
   $account = NULL;
 
-  if(!empty($name) && !empty($mail)) {
+  if(!empty($name) && !empty($mail_to)) {
       //Get current language as default user language
       global $language;
       $password = user_password(8);
  
       $fields = array(
         'name' => $name,
-        'mail' => $mail,
+        'mail' => $mail_to,
         'pass' => $password,
         'language' => $language->language, 
         'status' => 1,
@@ -220,16 +220,22 @@ function _user_create($name,$mail,$roles) {
         'roles' => $roles,
       );
  
-      $account = user_save('', $fields);
-      drupal_mail('webform_youmove', 
+      try { 
+      	$account = user_save('', $fields);
+
+      	drupal_mail('webform_youmove', 
                   'register_no_approval_required', 
-                  $mail, 
+                  $mail_to, 
                   $language, 
-                  array('account' => $account), 
+                  array('account' => $account, 'pre_mail_body' => $mail_body), 
                   variable_get('site_mail', 'noreply@example.com'));
 
+	return $account;
+	
+      } catch (Exception $e) {
+   	throw new Exception($e->getMessage());
+      }
       
-      return $account;
   } else {
       throw new Exception('Cannot create new user: user name or email empty.');
   }

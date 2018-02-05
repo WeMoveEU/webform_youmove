@@ -7,7 +7,7 @@ function webform_youmove_menu() {
   /************************/
 
   $items['admin/config/content/webform/webform_youmove'] = array(
-    'title' => 'WEMOVE - YouMove Webform (Campaign)',
+    'title' => t('WEMOVE - YouMove Webform (Campaign)'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('webform_youmove_admin_settings_form'),
     'access arguments' => array('administer site configuration'),
@@ -57,7 +57,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
   foreach($form_components as $form_component) {
     $form['ymw_contact']['ymw_contact_'.$form_component['name']] = array(
         '#type' => 'textfield',
-        '#title' => $form_component['label'],
+        '#title' => t($form_component['label']),
         '#default_value' => variable_get('webform_youmove__ymw_settings')[$form_component['name']],
         '#required' => TRUE,
     );
@@ -94,6 +94,17 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
   );
   
+  $form['ymw_registration_mail_body'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Registration mail body for new user creation (during campaign submission)'),
+    '#rows' => 10,
+    '#resizable' => TRUE,
+    '#attributes' => array('style' => 'height: auto;'),
+    '#default_value' => t(variable_get('webform_youmove__ymw_settings')['registration_mail_body']),
+    '#required' => TRUE,
+    '#translatable' => TRUE,
+  );
+  
   $form['#submit'][] = '_ymw_admin_settings_submit';
 
   return system_settings_form($form);
@@ -111,6 +122,7 @@ function _ymw_admin_settings_submit($form, $form_state) {
   $settings['published_ID'] =  $form_state['values']['ymw_is_published_ID'];
   $settings['submission_view_title'] = $form_state['values']['ymw_submission_view_title'];
   $settings['submission_edit_title'] = $form_state['values']['ymw_submission_edit_title'];
+  $settings['registration_mail_body'] = $form_state['values']['ymw_registration_mail_body'];
 
   variable_set('webform_youmove__ymw_ID', $form_state['values']['ymw_ID']);
   variable_set('webform_youmove__ymw_user_role_name', $form_state['values']['ymw_user_role_name']);
