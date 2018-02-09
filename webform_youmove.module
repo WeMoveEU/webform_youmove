@@ -95,7 +95,6 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
              
       $account = _user_create($user['name'],$user['mail'],array($rid =>$role_name),$settings['registration_mail_body']);
       variable_del('webform_youmove_user_temp');
-
       //Set permission to webform submission
       $submission->uid = $account->uid;
 
@@ -106,6 +105,20 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
   }
 }
 
+// Set submission owner here: 
+// - setting this in webform_youmove_webform_submission_presave make
+// submission page access denied
+function webform_youmove_preprocess_webform_confirmation_580(&$vars) {
+}
+
+function webform_youmove_preprocess_webform_confirmation(&$vars) {
+}
+
+function webform_youmove_preprocess_node(&$vars) {
+}
+
+function webform_youmove_preprocess_page(&$vars) {
+}
 
 function webform_youmove_webform_submission_render_alter(&$renderable){
   $settings = variable_get('webform_youmove__ymw_settings');
