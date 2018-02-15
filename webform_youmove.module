@@ -4,13 +4,11 @@ if (!defined('__DIR__')) {define('__DIR__', dirname(__FILE__));}
 require_once __DIR__ . '/webform_youmove.admin.inc';
 
 
-
 function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
 
   /************************/
   /***** YouMove Part *****/
   /************************/
-
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
   
   if ($form_id !== 'webform_client_form_'.$ymw_ID) return;
@@ -95,6 +93,7 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
              
       $account = _user_create($user['name'],$user['mail'],array($rid =>$role_name),$settings['registration_mail_body']);
       variable_del('webform_youmove_user_temp');
+      
       //Set permission to webform submission
       $submission->uid = $account->uid;
 
@@ -105,20 +104,6 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
   }
 }
 
-// Set submission owner here: 
-// - setting this in webform_youmove_webform_submission_presave make
-// submission page access denied
-function webform_youmove_preprocess_webform_confirmation_580(&$vars) {
-}
-
-function webform_youmove_preprocess_webform_confirmation(&$vars) {
-}
-
-function webform_youmove_preprocess_node(&$vars) {
-}
-
-function webform_youmove_preprocess_page(&$vars) {
-}
 
 function webform_youmove_webform_submission_render_alter(&$renderable){
   $settings = variable_get('webform_youmove__ymw_settings');
@@ -150,6 +135,7 @@ function webform_youmove_mail($key, &$message, $params) {
 function webform_youmove_menu_alter(&$items) {
   $items['node/%webform_menu/submission/%webform_menu_submission']['page callback'] = 'webform_youmove_webform_submission_view_page';
   $items['node/%webform_menu/submission/%webform_menu_submission/edit']['page callback'] = 'webform_youmove_webform_submission_edit_page';
+  $items['node/%webform_menu/done']['access callback'] = 'webform_youmove_webform_confirmation_page_access';
 }
 
 function webform_youmove_webform_submission_view_page($node, $submission, $format) {
@@ -169,6 +155,36 @@ function webform_youmove_webform_submission_edit_page($node, $submission, $forma
   if(isset($settings['submission_edit_title'])){drupal_set_title(t($settings['submission_edit_title']));}
   return $return_value;
 }
+
+function webform_youmove_webform_confirmation_page_access($node) {
+
+   // Make sure SID is a positive integer.
+   $sid = (!empty($_GET['sid']) && (int) $_GET['sid'] > 0) ? (int) $_GET['sid'] : NULL;
+
+   if ($sid) {
+    module_load_include('inc', 'webform', 'includes/webform.submissions');
+    $submission = webform_get_submission($node->nid, $sid);
+   }
+   else {
+    $submission = NULL;
+   }
+
+   if ($submission) {
+     if(!user_is_logged_in()) {
+         $hash_query = !empty($_GET['token']) ? $_GET['token'] : NULL;
+         $hash = webform_get_submission_access_token($submission);
+         if ($hash_query === $hash) {
+           return TRUE;
+         }
+     }
+   }
+
+   return webform_confirmation_page_access($node);
+}
+
+
+
+
 
 function _ymw_user_exists_validate(&$form, &$form_state) {
 
