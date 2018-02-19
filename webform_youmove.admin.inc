@@ -2,10 +2,6 @@
 
 function webform_youmove_menu() {
 
-  /************************/
-  /***** YouMove Part *****/
-  /************************/
-
   $items['admin/config/content/webform/webform_youmove'] = array(
     'title' => t('WEMOVE - YouMove Webform (Campaign)'),
     'page callback' => 'drupal_get_form',
@@ -13,6 +9,7 @@ function webform_youmove_menu() {
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
     'file' =>'webform_youmove.admin.inc', );
+
   return $items;
 }
 
@@ -20,10 +17,6 @@ function webform_youmove_menu() {
 
 function webform_youmove_admin_settings_form($form, &$form_state) {
 
-  /************************/
-  /***** YouMove Part *****/
-  /************************/
-  
   $form['ymw_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Webform ID'),
@@ -45,15 +38,15 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
-  
+
   $form_components = variable_get('webform_youmove__ymw_components',null);
-  
+
   $form['ymw_contact'] = array(
     '#type' => 'fieldset',
     '#title' => t('Contact:'),
     '#collapsible' => false,
   );
-       
+
   foreach($form_components as $form_component) {
     $form['ymw_contact']['ymw_contact_'.$form_component['name']] = array(
         '#type' => 'textfield',
@@ -62,7 +55,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
         '#required' => TRUE,
     );
   }
-  
+
   $form['ymw_disabled_fields'] = array(
     '#type' => 'textarea',
     '#title' => t('Webform submission disabled fields (edition)'),
@@ -70,7 +63,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#description' => t('Field keys, separated by commas'),
   );
-  
+
   $form['ymw_hidden_fields'] = array(
     '#type' => 'textarea',
     '#title' => t('Webform submission hidden fields (preview)'),
@@ -78,14 +71,14 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#description' => t('Field keys, separated by commas'),
   );
-  
+
   $form['ymw_submission_view_title'] = array(
     '#type' => 'textfield',
     '#title' => t('Webform submission viewed title'),
     '#default_value' => variable_get('webform_youmove__ymw_settings')['submission_view_title'],
     '#required' => TRUE,
   );
-  
+
   $form['ymw_submission_edit_title'] = array(
     '#type' => 'textfield',
     '#title' => t('Webform submission edited title'),
@@ -93,7 +86,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     variable_get('webform_youmove__ymw_settings')['submission_edit_title'],
     '#required' => TRUE,
   );
-  
+
   $form['ymw_registration_mail_body'] = array(
     '#type' => 'textarea',
     '#title' => t('Registration mail body for new user creation (during campaign submission)'),
@@ -104,7 +97,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#translatable' => TRUE,
   );
-  
+
   $form['#submit'][] = '_ymw_admin_settings_submit';
 
   return system_settings_form($form);
