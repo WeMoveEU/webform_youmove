@@ -121,13 +121,23 @@ function webform_youmove_menu_alter(&$items) {
   $items['node/%webform_menu/done']['access callback'] = 'webform_youmove_webform_confirmation_page_access';
 }
 
+/**
+ * Customize the submission view page:
+ * - Set the title according to the module settings for unpublished campaigns
+ * - Redirects to the Speakout campaign for published campaigns
+ */
 function webform_youmove_webform_submission_view_page($node, $submission, $format) {
+  $submission_data = drupout_params($node, $submission);
+  if (isset($submission_data['ready_to_publish']) && $submission_data['ready_to_publish'] != '1') {
+    $return_value = webform_submission_page($node, $submission, $format);
+    $settings = variable_get('webform_youmove__ymw_settings');
 
-  $return_value = webform_submission_page($node, $submission, $format);
-  $settings = variable_get('webform_youmove__ymw_settings');
-
-  if(isset($settings['submission_view_title'])){drupal_set_title(t($settings['submission_view_title']));}
-  return $return_value;
+    if (isset($settings['submission_view_title'])) {
+      drupal_set_title(t($settings['submission_view_title']));
+    }
+    return $return_value;
+  }
+  drupal_goto($submission_data['speakout_link']);
 }
 
 function webform_youmove_webform_submission_edit_page($node, $submission, $format) {
