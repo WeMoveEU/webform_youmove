@@ -3,14 +3,27 @@
 if (!defined('__DIR__')) {define('__DIR__', dirname(__FILE__));}
 require_once __DIR__ . '/webform_youmove.admin.inc';
 
-
+/**
+ * Customize the campaign submission:
+ * - Set fields related to the user
+ * - Disable special fields according to the module settings
+ *   (depending on the webform field value: 'ready to publish' field)
+ */
 function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
-
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+
+
+  // If not the campaign webform: stop
 
   if ($form_id !== 'webform_client_form_'.$ymw_ID) return;
 
   $settings = variable_get('webform_youmove__ymw_settings');
+
+  // Set a default value for some fields, computed from mandatory fields
+  $form['#validate'][] = '_ymw_set_default_values';
+
+  // Set webform fields related to the user if already logged
+  // otherwise set the validation function
 
   if (user_is_logged_in()) {
     $fieldset_id = $settings['contact__fieldset_id'];
@@ -19,48 +32,55 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
     $form['#validate'][] = '_ymw_user_exists_validate';
   }
 
-  //Disable some webform fields while edition
-  //(so webform submission already exists)
-  //and option 'ready to publish' is checked (value=1)
+
+  // Disable some webform fields while edition
+  // (so the webform submission already exists)
+  // and depending on the option 'ready to publish'
+
   if ($form['#submission']) {
     $is_published_field_ID = $settings['published_ID'];
 
-    // Get field (option 'ready to publish') value from submission
-    $components = $form['#node']->webform['components'];
-    $data = $form['#submission']->data;
-    $field_key_index = NULL;
 
-    foreach ($components as $key => $component) {
-      if($component['form_key'] == $is_published_field_ID) {
-          $field_key_index = $key;
-          break;
-      }
-    }
-    foreach ($data as $key => $values) {
-      if($key == $field_key_index) {
-        $is_published_field_value = (isset($values[0])) ? $values[0] : NULL;
-        break;
-      }
+    // Get field ('ready to publish' option) value from the submission form
+//    $is_published_field_value = _get_value($is_published_field_ID,$form['#node'],$form['#submission']);
+    $submission_data = drupout_params($form['#node'],$form['#submission']);
+    $is_published_field_value = $submission_data[$is_published_field_ID];
+
+    // Disable special fields
+    // depending on the 'ready to publish' value
+    // - is checked (value=1)
+    // - is unchecked (value=0)
+
+    $fields_disabled = ($is_published_field_value) ?
+    variable_get('webform_youmove__ymw_settings')['disabled_fields__published'] : variable_get('webform_youmove__ymw_settings')['disabled_fields'];
+    $fields_disabled_arr = explode(',',$fields_disabled);
+
+
+    // Disabled fields according to the module settings
+
+    foreach ($fields_disabled_arr as $field) {
+      _set_webform_component($field,$form,'#attributes',array('disabled' => '1'));
     }
 
-    //Disable special fields
+
+    // Disable the publishing field if already disabled
+
     if ($is_published_field_value) {
-      //Set disabled publishing field
-      _set_webform_component($is_published_field_ID, $form, '#attributes', array('disabled' => '1'));
-
-      //Set disabled field keys
-      $fields = explode(',', variable_get('webform_youmove__ymw_settings')['disabled_fields']);
-      foreach ($fields as $field) {
-        _set_webform_component($field,$form,'#attributes',array('disabled' => '1'));
-      }
+      _set_webform_component($is_published_field_ID, $form, '#disabled',TRUE);
     }
+
   }
 }
 
 
+/**
+ * Extra operation during the campaign submission presave (in DB):
+ * - Create new user (submission owner) based on webform data
+ *   (only for anonymous users)
+ */
 function webform_youmove_webform_submission_presave($node,&$submission) {
 
-  /***** Create new user based on webform *****/
+  // If the user is already logged in: stop
   if (user_is_logged_in()) return;
 
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
@@ -68,7 +88,8 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
 
   if ($node->nid == $ymw_ID && !empty($user)) {
     try {
-      //Create user from webform submission (with roles)
+      // Create the user from webform submission (with roles)
+
       $settings = variable_get('webform_youmove__ymw_settings');
       $role_name = variable_get('webform_youmove__ymw_user_role_name');
       $role = user_role_load_by_name($role_name);
@@ -77,7 +98,8 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
       $account = _user_create($user['name'], $user['mail'], array($rid =>$role_name), $settings['registration_mail_body']);
       variable_del('webform_youmove_user_temp');
 
-      //Set permission to webform submission
+      // Set permission to the webform submission
+
       $submission->uid = $account->uid;
 
     } catch(Exception $e) {
@@ -88,10 +110,14 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
 }
 
 
+/**
+ * Extra operation during campaign submission render:
+ * - Hide special fields according to the module settings
+ */
 function webform_youmove_webform_submission_render_alter(&$renderable){
   $settings = variable_get('webform_youmove__ymw_settings');
 
-  //Hide configured field keys
+  //Hide fields according to the module settings
   $fields = explode(',', variable_get('webform_youmove__ymw_settings')['hidden_fields']);
   foreach($fields as $field) {
     _set_webform_component($field, $renderable, '#access', FALSE);
@@ -99,6 +125,9 @@ function webform_youmove_webform_submission_render_alter(&$renderable){
 }
 
 
+/**
+ * Translate a mail
+ */
 function webform_youmove_mail($key, &$message, $params) {
   $language = $message['language'];
   $variables = array('user' => $params['account']);
@@ -115,40 +144,81 @@ function webform_youmove_mail($key, &$message, $params) {
 
 }
 
+
+/**
+ * Redirection to the custom function for the campaign submission:
+ * - view page
+ * - edit page
+ * - confirmation page (after new submission)
+ */
 function webform_youmove_menu_alter(&$items) {
   $items['node/%webform_menu/submission/%webform_menu_submission']['page callback'] = 'webform_youmove_webform_submission_view_page';
   $items['node/%webform_menu/submission/%webform_menu_submission/edit']['page callback'] = 'webform_youmove_webform_submission_edit_page';
   $items['node/%webform_menu/done']['access callback'] = 'webform_youmove_webform_confirmation_page_access';
 }
 
+
 /**
  * Customize the submission view page:
- * - Set the title according to the module settings for unpublished campaigns
- * - Redirects to the Speakout campaign for published campaigns
+ * - Set the title according to the module settings
+ * - Redirect to the Speakout campaign for published campaigns
  */
 function webform_youmove_webform_submission_view_page($node, $submission, $format) {
   $submission_data = drupout_params($node, $submission);
+
   if (isset($submission_data['ready_to_publish']) && $submission_data['ready_to_publish'] != '1') {
     $return_value = webform_submission_page($node, $submission, $format);
     $settings = variable_get('webform_youmove__ymw_settings');
 
-    if (isset($settings['submission_view_title'])) {
-      drupal_set_title(t($settings['submission_view_title']));
+    if (isset($settings['title_ID'])) {
+      $title_key = $settings['title_ID'];
+      //$submission_title = _get_value($title_key,$node,$submission);
+      $submission_title = = $submission_data[$title_key];
+  
+      $node_title_template = t($settings['submission_view_title']);
+      $node_title = str_replace('[title]',$submission_title,$node_title_template);
+
+      drupal_set_title($node_title);
     }
     return $return_value;
   }
+
   drupal_goto($submission_data['speakout_link']);
+
 }
 
+
+/**
+ * Customize the submission edit page:
+ * - Set the title according to the module settings
+ */
 function webform_youmove_webform_submission_edit_page($node, $submission, $format) {
-
   $return_value = webform_submission_page($node, $submission, $format);
-  $settings = variable_get('webform_youmove__ymw_settings');
 
-  if(isset($settings['submission_edit_title'])){drupal_set_title(t($settings['submission_edit_title']));}
+  $settings = variable_get('webform_youmove__ymw_settings');
+  $submission_data = drupout_params($node, $submission);
+
+  if (isset($settings['title_ID'])) {
+      $title_key = $settings['title_ID'];
+//      $submission_title = _get_value($title_key,$node,$submission);
+      $submission_title = $submission_data[$title_key];
+      $node_title_template = t($settings['submission_edit_title']);
+      $node_title = str_replace('[title]',$submission_title,$node_title_template);
+
+      drupal_set_title($node_title);
+  }
+
+
   return $return_value;
 }
 
+
+/**
+ * Customize new submission confirmation page:
+ * - Set the submission token for anonymous users
+ *   because normally webform submitted by anonymous user
+ *   doesn't have the token and the text on confirmation page requires it
+ */
 function webform_youmove_webform_confirmation_page_access($node) {
 
    // Make sure SID is a positive integer.
@@ -170,17 +240,36 @@ function webform_youmove_webform_confirmation_page_access($node) {
    return webform_confirmation_page_access($node);
 }
 
+
+function _ymw_set_default_values(&$form, &$form_state) {
+}
+
+
+/**
+ * - Check if the user name already exists in system
+ * - Check if the user mail already exists in system
+ * - Set temp user variable
+ */
 function _ymw_user_exists_validate(&$form, &$form_state) {
 
  try {
+
+   // Check if the user name/mail already exists in system
+   // according to the module settings
+
    $settings = variable_get('webform_youmove__ymw_settings');
    $submission_values = $form_state['input']['submitted'];
 
    if(isset($settings) && isset($submission_values)) {
      $name = _get_value_recursive($settings['contact__name_id'],$submission_values);
      $mail = _get_value_recursive($settings['contact__mail_id'],$submission_values);
+
      if(!empty($name) && user_load_by_name($name)) {form_set_error('',t('Contact name already exists in system.'));}
      if(!empty($mail) && user_load_by_mail($mail)) {form_set_error('',t('Contact mail already exists in system.'));}
+
+
+     // Set temp user variable
+
      variable_set('webform_youmove_user_temp',array('name'=>$name,'mail'=>$mail));
    }
  } catch (Exception $e) {
@@ -191,6 +280,13 @@ function _ymw_user_exists_validate(&$form, &$form_state) {
 }
 
 
+/**
+ * - Create new user in the system
+ *   based on name, mail address, role
+ * - Send a mail to new created user
+ *
+ * Return: New user account
+ */
 function _user_create($name,$mail_to,$roles,$mail_body) {
   $account = NULL;
 
@@ -231,6 +327,11 @@ function _user_create($name,$mail_to,$roles,$mail_body) {
 }
 
 
+/**
+ * Recursive search by key
+ *
+ * Return: key value from nested arrays
+ */
 function _get_value_recursive($key,$values) {
   foreach($values as $key_value => $value){
       if($key_value === $key) {return $value;}
@@ -242,6 +343,12 @@ function _get_value_recursive($key,$values) {
   return NULL;
 }
 
+
+/**
+ * Set the attribute value in nested array
+ *
+ * Return: Nested array with changes
+ */
 function &_set_webform_component($key,&$values,$attribute_name,$attribute_value) {
   foreach($values as $key_value => &$value){
       if($key_value === $key) {
@@ -265,3 +372,97 @@ function &_set_webform_component($key,&$values,$attribute_name,$attribute_value)
   return NULL;
 }
 
+
+/**
+ * Get submission value based on its webform
+ *
+ * Return: Submission value
+ */
+function _get_value($key,$webform_node,$webform_submission) {
+
+    $index_source_arr = $webform_node->webform['components'];
+    $value_source_arr = $webform_submission->data;
+    $field_key_index = NULL;
+
+    foreach ($index_source_arr as $index => $index_value) {
+      if($index_value['form_key'] == $key) {
+          $field_key_index = $index;
+          break;
+      }
+    }
+    foreach ($value_source_arr as $index => $values) {
+      if($index == $field_key_index) {
+        return (isset($values[0])) ? $values[0] : NULL;
+      }
+    }
+
+    return NULL;
+}
+
+
+/**
+ * Set submission value based on its webform
+ */
+function _set_value($key,$value,$webform_node,$webform_submission) {
+
+    $index_source_arr = $webform_node->webform['components'];
+    $value_source_arr = $webform_submission->data;
+    $field_key_index = NULL;
+
+    foreach ($index_source_arr as $index => $index_value) {
+      if($index_value['form_key'] == $key) {
+          $field_key_index = $index;
+          break;
+      }
+    }
+    foreach ($value_source_arr as $index => $values) {
+      if(($index == $field_key_index) && isset($values[0])) {
+         $webform_submission->data[$index][0] = $value;
+         webform_submission_update($webform_node, $webform_submission); 
+      }
+    }
+
+    return NULL;
+}
+
+
+/**
+ * Function for access primary tabs link: 'Publish'
+ * Check if givent submission is already published
+ * if so: 'Publish' link id hidden
+ *
+ * Return: True/False
+ */
+function _submission_publish_func_access($type,$node,$submission) {
+    $settings = variable_get('webform_youmove__ymw_settings');
+
+    if($settings && isset($settings['published_ID'])) {	
+        $is_published_field_ID = $settings['published_ID'];
+        $submission_data = drupout_params($node,$submission);
+        return !((bool)$submission_data[$is_published_field_ID]);   
+    }
+
+    return FALSE;
+}
+
+/**
+ * Function after called  primary tabs link: 'Publish'
+ * - set the 'ready to pyblish' submission field to true
+ * - redirect to speakout page
+ */
+function _submission_publish_func_callback($node,$submission) {
+    $settings = variable_get('webform_youmove__ymw_settings');
+
+    if($settings && isset($settings['published_ID']) && isset($settings['speakout_link_ID'])) {
+        $is_published_field_ID = $settings['published_ID'];
+        $is_published_field_positive_value = $settings['published_positive_value'];
+        $submission_data = drupout_params($node,$submission);
+
+        _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission);
+
+        $speakout_link_field_ID = $settings['speakout_link_ID'];
+        drupal_goto($submission_data[$speakout_link_field_ID]);
+    }
+
+    return '';
+}

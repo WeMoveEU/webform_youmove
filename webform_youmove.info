@@ -4,3 +4,4 @@ core = 7.x
 package = Webform
 dependencies[] = webform
 dependencies[] = drupout
+configure = admin/config/content/webform/webform_youmove
