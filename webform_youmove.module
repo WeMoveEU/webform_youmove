@@ -329,8 +329,8 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           $name = $flat_values[$control_name_CID];
           $mail = $flat_values[$control_mail_CID];
 
-          if(!empty($name) && user_load_by_name($name)) {form_set_error('',t('Contact name already exists in system.'));}
-          if(!empty($mail) && user_load_by_mail($mail)) {form_set_error('',t('Contact mail already exists in system.'));}
+          if(!empty($name) && user_load_by_name($name)) {form_set_error('',t('Contact name already exists.'));}
+          if(!empty($mail) && user_load_by_mail($mail)) {form_set_error('',t('Contact mail already exists.'));}
 
           //Set temp user variable
           variable_set('webform_youmove_user_temp',array('name'=>$name,'mail'=>$mail));
