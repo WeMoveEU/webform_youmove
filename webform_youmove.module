@@ -390,12 +390,15 @@ function _user_create($name,$mail_to,$roles,$mail_body) {
 
     try {
       $account = user_save('', $fields);
+      $mail_subject = t('Congratulations').' '.$name.'! '.t('You have a account on').' youmove.';
 
       drupal_mail('webform_youmove',
                 'register_no_approval_required',
                 $mail_to,
                 $language,
-                array('account' => $account, 'pre_mail_body' => $mail_body),
+                array('account' => $account, 
+                      'pre_mail_body' => $mail_body,
+                      'subject' => $mail_subject),
                 variable_get('site_mail', 'noreply@example.com'));
 
       return $account;
