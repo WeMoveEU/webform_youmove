@@ -115,12 +115,6 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_fieldset_ID],
     '#required' => TRUE,
   );
-  $form['ymw_contact']['ymw_contact_name_ID'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Name field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_name_ID],
-    '#required' => TRUE,
-  );
   $form['ymw_contact']['ymw_contact_mail_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Mail field key'),
@@ -240,7 +234,6 @@ function _ymw_admin_settings_submit($form, $form_state) {
   $settings['user_data_fieldset_ID'] =  $form_state['values']['ymw_user_data_fieldset_ID']; 
 
   $settings['contact_fieldset_ID'] = $form_state['values']['ymw_contact_fieldset_ID'];
-  $settings['contact_name_ID'] = $form_state['values']['ymw_contact_name_ID'];
   $settings['contact_mail_ID'] = $form_state['values']['ymw_contact_mail_ID'];
   
   $settings['login_fieldset_ID'] = $form_state['values']['ymw_login_fieldset_ID'];
