@@ -11,6 +11,7 @@ require_once __DIR__ . '/webform_youmove.admin.inc';
  * - (edition/submission mode) Set 'Cancel' button
  * - (edition/submission mode) Disable special fields according to the module settings
  *   depending on the webform field value: 'ready to publish' field
+ * - (edition/submission mode) Remove message 'Submission updated' from set of status messages
  */
 function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
@@ -69,16 +70,21 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
       _set_webform_component($field,$form,'#attributes',array('disabled' => '1'));
     }
 
-    //Disable the 'ready to publish' field if already set to positive value
+    // Disable the 'ready to publish' field if already set to positive value
     if(_webform_youmove_ready_to_publish($submission_data)) {
       _set_webform_component('ready_to_publish', $form, '#disabled',TRUE);
     }
+
+    // Remove message 'Submission updated' from set of status messages
+    $form['#submit'][] = '_remove_update_submission_msg';
+
   }
   // NEW MODE
   else {
-     //Disable 'Ready to publish' field for not logget in users
+     //Disable 'Ready to publish' field for not logged in users
      if (!user_is_logged_in()) {
-         _set_webform_component($settings['published_ID'], $form, '#disabled',TRUE);
+         $is_published_field_ID = $settings['published_ID'];
+         _set_webform_component($is_published_field_ID, $form,'#access',FALSE);
      } else {
        _webform_set_redirect_page($form,'[submission:url]');
      } 
@@ -124,6 +130,10 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
       watchdog('webform_youmove::webform_youmove_webform_submission_presave()', $e->getMessage(), null, WATCHDOG_ERROR);
     }
   }
+}
+
+
+function webform_youmove_webform_submission_update($node, $submission) {
 }
 
 
@@ -327,7 +337,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           //Check if the user name/mail already exists in system
           $mail = $flat_values[$control_mail_CID];
 
-          if(!empty($mail) && (user_load_by_mail($mail) || user_load_by_name($mail))) {form_set_error('',t('Contact name/mail already exists.'));}
+          if(!empty($mail) && (user_load_by_mail($mail) || user_load_by_name($mail))) {form_set_error('',t('Contact name already exists.'));}
 
           //Set temp user variable
           variable_set('webform_youmove_user_temp',array('name'=>$mail,'mail'=>$mail));
@@ -572,3 +582,17 @@ function _webform_set_redirect_page($form,$redirect_url) {
   $form['#node']->webform['redirect_url'] = $redirect_url;
 }
 
+
+/**
+ * Remove status messages: 'Submission updated.' 
+ * from messages set by
+ * 'drupal_set_messages' function
+ */
+function _remove_update_submission_msg($form, &$form_state) {
+   $status_msgs = drupal_get_messages('status');
+   foreach($status_msgs['status'] as $msg) {
+      if($msg != 'Submission updated.') {
+          drupal_set_message($msg,'status');
+      }
+   }
+}
