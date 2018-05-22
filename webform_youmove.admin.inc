@@ -121,6 +121,12 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_mail_ID],
     '#required' => TRUE,
   );
+  $form['ymw_contact']['ymw_contact_passwd_ID'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Password field key'),
+    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_passwd_ID],
+    '#required' => TRUE,
+  );
   
 
   $form['ymw_login'] = array(
@@ -235,6 +241,7 @@ function _ymw_admin_settings_submit($form, $form_state) {
 
   $settings['contact_fieldset_ID'] = $form_state['values']['ymw_contact_fieldset_ID'];
   $settings['contact_mail_ID'] = $form_state['values']['ymw_contact_mail_ID'];
+  $settings['contact_passwd_ID'] = $form_state['values']['ymw_contact_passwd_ID'];
   
   $settings['login_fieldset_ID'] = $form_state['values']['ymw_login_fieldset_ID'];
   $settings['login_name_ID'] = $form_state['values']['ymw_login_name_ID'];

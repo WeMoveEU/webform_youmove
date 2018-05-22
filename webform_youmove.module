@@ -118,8 +118,8 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
       $role_name = variable_get('webform_youmove__ymw_user_role_name');
       $role = user_role_load_by_name($role_name);
       $rid = $role->rid;
-
-      $account = _user_create($user['name'], $user['mail'], array($rid =>$role_name), $settings['registration_mail_body']);
+      
+      $account = _user_create($user['name'], $user['mail'], $user['password'], array($rid =>$role_name), $settings['registration_mail_body']);
       variable_del('webform_youmove_user_temp');
 
       // Set permission to the webform submission
@@ -331,17 +331,21 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           
           //Get user contact controls
           $control_mail_ID = $settings['contact_mail_ID'];
-          $control_name_CID = _get_cid($control_name_ID,$node);
+          $control_passwd_ID = $settings['contact_passwd_ID'];
+
           $control_mail_CID = _get_cid($control_mail_ID,$node);
+          $control_passwd_CID = _get_cid($control_passwd_ID,$node);
           
-          //Check if the user name/mail already exists in system
+          //Check if the user mail already exists in system
           $mail = $flat_values[$control_mail_CID];
+          $passwd = $flat_values[$control_passwd_CID];
 
           if(!empty($mail) && (user_load_by_mail($mail) || user_load_by_name($mail))) {form_set_error('',t('Contact name already exists.'));}
 
           //Set temp user variable
-          variable_set('webform_youmove_user_temp',array('name'=>$mail,'mail'=>$mail));
+          variable_set('webform_youmove_user_temp',array('name'=>$mail,'mail'=>$mail,'password'=>$passwd));
        
+          _webform_set_redirect_page($form,'user');
 
       } elseif ($sorter->componentVisibility($user_data__login__control_component['cid'],$user_data__login__control_component['page_num']) == WebformConditionals::componentShown) {
           
@@ -360,6 +364,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
               $login_form = array();
               $login_form['uid'] = $user_obj->uid;
               user_login_submit(array(),$login_form);
+
               _webform_set_redirect_page($form,'[submission:url]');
           } else {
               form_set_error('', t('Sorry, unrecognized username or password.'));
@@ -377,21 +382,20 @@ function _ymw_user_data_validate(&$form, &$form_state) {
  *
  * Return: New user account
  */
-function _user_create($name,$mail_to,$roles,$mail_body) {
+function _user_create($name,$mail_to,$passwd,$roles,$mail_body) {
   $account = NULL;
 
   if(!empty($name) && !empty($mail_to)) {
     //Get current language as default user language
     global $language;
-    $password = user_password(8);
 
     $fields = array(
       'name' => $name,
       'mail' => $mail_to,
-      'pass' => $password,
+      'pass' => $passwd,
       'language' => $language->language,
       'status' => 1,
-      'init' => 'email address',
+      'init' => $mail_to,
       'roles' => $roles,
     );
 
@@ -400,13 +404,13 @@ function _user_create($name,$mail_to,$roles,$mail_body) {
       $mail_subject = t('Congratulations').' '.$name.'! '.t('You have a account on').' youmove.';
 
       drupal_mail('webform_youmove',
-                'register_no_approval_required',
-                $mail_to,
-                $language,
-                array('account' => $account, 
+                  'webform_youmove_register',
+                  $mail_to,
+                  $language,
+                  array('account' => $account, 
                       'pre_mail_body' => $mail_body,
                       'subject' => $mail_subject),
-                variable_get('site_mail', 'noreply@example.com'));
+                  variable_get('site_mail', 'noreply@example.com'));
 
       return $account;
 
