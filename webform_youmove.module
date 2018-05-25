@@ -101,35 +101,80 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Extra operation during the campaign submission presave (in DB):
  * - Create new user (submission owner) based on webform data
- *   (only for anonymous users)
+ *   (only for anonymous users - user not logged in)
+ * - Send mails 
+ *   (only for logged in users)
  */
 function webform_youmove_webform_submission_presave($node,&$submission) {
   
-  // If the user is already logged in: stop
-  if (user_is_logged_in()) return;
+  $settings = variable_get('webform_youmove__ymw_settings');
 
-  $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-  $user = variable_get('webform_youmove_user_temp', NULL);
+  if (user_is_logged_in()) {
+    $submission_is_new = ($submission->sid) ? FALSE : TRUE;
+    
+    $submission_data = drupout_params($node, $submission);
+    $submission_is_ready_to_publish = _webform_youmove_ready_to_publish($submission_data);
+    $submission_become_ready_to_publish = FALSE;
 
-  if ($node->nid == $ymw_ID && !empty($user)) {
-    try {
-      // Create the user from webform submission (with roles)
-      $settings = variable_get('webform_youmove__ymw_settings');
-      $role_name = variable_get('webform_youmove__ymw_user_role_name');
-      $role = user_role_load_by_name($role_name);
-      $rid = $role->rid;
+    // Check previous value 'ready to publish' if not new submission
+    if(!$submission_is_new) {
+      watchdog('test-1.1',$submission->nid);
+      watchdog('test-1.1',$submission->sid);
 
-      $account = _user_create($user['name'], $user['mail'], array($rid =>$role_name), $settings['registration_mail_body']);
-      variable_del('webform_youmove_user_temp');
+      module_load_include('inc', 'webform', 'includes/webform.submissions');
+      $submission_prev_arr = webform_get_submissions(array('nid' => $submission->nid,'sid' => $submission->sid));
+      $submission_prev = $submission_prev_arr[$submission->sid];
 
-      // Set permission to the webform submission
-      $submission->uid = $account->uid;
+      watchdog('test-1.15',serialize($submission_prev));
+      $submission_data_prev = drupout_params($node, $submission_prev);
+      watchdog('test-1.2',implode($submission_data_prev));
+      //dpm($submission_data_prev);
+      $submission_is_ready_to_publish_prev = _webform_youmove_ready_to_publish($submission_data_prev);
+      watchdog('test-1.3', $submission_is_ready_to_publish_prev);
+      if(!$submission_is_ready_to_publish_prev && $submission_is_ready_to_publish){
+        $submission_become_ready_to_publish = TRUE;
+      }
+    }
+watchdog('test0',$submission_is_new);
+watchdog('test1',$submission_is_ready_to_publish);
+watchdog('test2',$submission_become_ready_to_publish);
 
-    } catch(Exception $e) {
-      drupal_set_message(t('Some errors occured, please contact us'), 'error');
-      watchdog('webform_youmove::webform_youmove_webform_submission_presave()', $e->getMessage(), null, WATCHDOG_ERROR);
+    // Send mail for new petition and not published
+    if($submission_is_new && !$submission_is_ready_to_publish) {
+       _mail('NEW_NOT_PUBLISHED_SUBMISSION',$node,$submission);
+    }
+
+    // Send mail for petition published
+    if(($submission_is_new && $submission_is_ready_to_publish) ||
+       (!$submission_is_new && $submission_become_ready_to_publish)) {
+       _mail('PUBLISHED_SUBMISSION',$node,$submission); 
+    }
+
+  } else {
+    
+    $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+    $user = variable_get('webform_youmove_user_temp', NULL);
+
+    if ($node->nid == $ymw_ID && !empty($user)) {
+      try {
+        // Create the user from webform submission (with roles)
+        $role_name = variable_get('webform_youmove__ymw_user_role_name');
+        $role = user_role_load_by_name($role_name);
+        $rid = $role->rid;
+      
+        $account = _user_create($user['name'], $user['mail'], $user['password'], array($rid =>$role_name), $settings['registration_mail_body']);
+        variable_del('webform_youmove_user_temp');
+
+        // Set permission to the webform submission
+        $submission->uid = $account->uid;
+
+      } catch(Exception $e) {
+        drupal_set_message(t('Some errors occured, please contact us'), 'error');
+        watchdog('webform_youmove::webform_youmove_webform_submission_presave()', $e->getMessage(), null, WATCHDOG_ERROR);
+      }
     }
   }
+  
 }
 
 
@@ -331,17 +376,27 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           
           //Get user contact controls
           $control_mail_ID = $settings['contact_mail_ID'];
-          $control_name_CID = _get_cid($control_name_ID,$node);
-          $control_mail_CID = _get_cid($control_mail_ID,$node);
-          
-          //Check if the user name/mail already exists in system
-          $mail = $flat_values[$control_mail_CID];
+          $control_passwd_ID = $settings['contact_passwd_ID'];
 
+          $control_mail_CID = _get_cid($control_mail_ID,$node);
+          $control_passwd_CID = _get_cid($control_passwd_ID,$node);
+          
+          $mail = $flat_values[$control_mail_CID];
+          $passwd = $flat_values[$control_passwd_CID];
+
+          //Check mail has proper format
+          $regex = '/^[a-zA-Z0-9_-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-]+$/';
+          if(!preg_match($regex,$mail)) {
+              form_set_error('',t('Mail in wrong format.'));
+          }
+
+          //Check if the user mail already exists in system
           if(!empty($mail) && (user_load_by_mail($mail) || user_load_by_name($mail))) {form_set_error('',t('Contact name already exists.'));}
 
           //Set temp user variable
-          variable_set('webform_youmove_user_temp',array('name'=>$mail,'mail'=>$mail));
+          variable_set('webform_youmove_user_temp',array('name'=>$mail,'mail'=>$mail,'password'=>$passwd));
        
+          _webform_set_redirect_page($form,'user');
 
       } elseif ($sorter->componentVisibility($user_data__login__control_component['cid'],$user_data__login__control_component['page_num']) == WebformConditionals::componentShown) {
           
@@ -360,13 +415,13 @@ function _ymw_user_data_validate(&$form, &$form_state) {
               $login_form = array();
               $login_form['uid'] = $user_obj->uid;
               user_login_submit(array(),$login_form);
+
               _webform_set_redirect_page($form,'[submission:url]');
           } else {
               form_set_error('', t('Sorry, unrecognized username or password.'));
           }
       } 
    }
-
 }
 
 
@@ -377,36 +432,35 @@ function _ymw_user_data_validate(&$form, &$form_state) {
  *
  * Return: New user account
  */
-function _user_create($name,$mail_to,$roles,$mail_body) {
+function _user_create($name,$mail_to,$passwd,$roles,$mail_body) {
   $account = NULL;
 
   if(!empty($name) && !empty($mail_to)) {
     //Get current language as default user language
     global $language;
-    $password = user_password(8);
 
     $fields = array(
       'name' => $name,
       'mail' => $mail_to,
-      'pass' => $password,
+      'pass' => $passwd,
       'language' => $language->language,
       'status' => 1,
-      'init' => 'email address',
+      'init' => $mail_to,
       'roles' => $roles,
     );
 
     try {
       $account = user_save('', $fields);
-      $mail_subject = t('Congratulations').' '.$name.'! '.t('You have a account on').' youmove.';
+      $mail_subject = t($settings['registration_mail_subject'],array('[user:name]' => $name));
 
       drupal_mail('webform_youmove',
-                'register_no_approval_required',
-                $mail_to,
-                $language,
-                array('account' => $account, 
+                  'webform_youmove_register',
+                  $mail_to,
+                  $language,
+                  array('account' => $account, 
                       'pre_mail_body' => $mail_body,
                       'subject' => $mail_subject),
-                variable_get('site_mail', 'noreply@example.com'));
+                  variable_get('site_mail', 'noreply@example.com'));
 
       return $account;
 
@@ -531,6 +585,7 @@ function _submission_publish_func_access($type,$node,$submission) {
  * Callback of primary tabs link: 'Publish'
  * - set the 'ready to publish' submission field to true
  * - generate speakout link if empty
+ * - send mail
  * - redirect to speakout page
  */
 function _submission_publish_func_callback($type,$node,$submission) {
@@ -550,6 +605,7 @@ function _submission_publish_func_callback($type,$node,$submission) {
     }
 
     _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission);
+    _mail('PUBLISHED_SUBMISSION',$node,$submission);
     drupal_goto($link);
 
     return '';
@@ -595,4 +651,52 @@ function _remove_update_submission_msg($form, &$form_state) {
           drupal_set_message($msg,'status');
       }
    }
+}
+
+
+/**
+ * Send mail due to key
+ * - (key)'published_submission': mail after published campaign(submission)
+ * - (key)'new_not_published_submission': mail after new, not published campaign(submission)
+ */
+function _mail($key,$node,$submission) {
+  global $user;
+  global $language;
+
+  if($user && $language && $key) {
+    $mail_to = $user->mail;
+    $settings = variable_get('webform_youmove__ymw_settings');
+
+    switch ($key) {
+      case 'PUBLISHED_SUBMISSION':
+        $submission_data = drupout_params($node,$submission);
+        $title_ID = $settings['title_ID'];
+        $speakout_link_ID = $settings['speakout_link_ID'];
+        $link = $submission_data[$speakout_link_ID];
+
+        if (empty($link)) {
+          $title = $submission_data[$title_ID];
+          $link = _drupout_speakout_link($title);
+        }
+
+        $mail_body = t($settings['submission_published_mail_body'],array('[link:petition]' => $link));
+        $mail_subject = t($settings['submission_published_mail_subject']);
+        break;
+      case 'NEW_NOT_PUBLISHED_SUBMISSION':
+        $link = url(variable_get('webform_youmove__ymw_user_dashboard_url'), array('absolute' => TRUE, 'language' => $language));
+        $mail_body = t($settings['new_submission_not_published_mail_body'],array('[link:dashboard]' => $link));
+        $mail_subject = t($settings['new_submission_not_published_mail_subject']);
+        break;
+    }
+
+    drupal_mail(
+      'webform_youmove',
+      'webform_youmove_campaign',
+      $mail_to,
+      $language,
+      array('pre_mail_body' => $mail_body,
+            'subject' => $mail_subject),
+      variable_get('site_mail', 'noreply@example.com'));
+
+  }
 }
