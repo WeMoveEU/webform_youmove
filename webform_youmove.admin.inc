@@ -207,13 +207,74 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
-  $form['ymw_registration_mail_body'] = array(
+
+  // MAILS
+
+  $form['ymw_registration_mail'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Registration mail for new user creation (during campaign submission)'),
+    '#collapsible' => false,
+  );
+  $form['ymw_registration_mail']['ymw_registration_mail_subject'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mail subject'),
+    '#default_value' =>
+    variable_get('webform_youmove__ymw_settings')['registration_mail_subject'],
+    '#required' => TRUE,
+  );
+  $form['ymw_registration_mail']['ymw_registration_mail_body'] = array(
     '#type' => 'textarea',
-    '#title' => t('Registration mail body for new user creation (during campaign submission)'),
+    '#title' => t('Mail body'),
     '#rows' => 10,
     '#resizable' => TRUE,
     '#attributes' => array('style' => 'height: auto;'),
     '#default_value' => t(variable_get('webform_youmove__ymw_settings')['registration_mail_body']),
+    '#required' => TRUE,
+    '#translatable' => TRUE,
+  );
+  
+  $form['ymw_submmission_new_not_published_mail'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('New campaign not published mail'),
+    '#collapsible' => false,
+  );
+  $form['ymw_submmission_new_not_published_mail']['ymw_submmission_new_not_published_mail_subject'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mail subject'),
+    '#default_value' =>
+    variable_get('webform_youmove__ymw_settings')['new_submission_not_published_mail_subject'],
+    '#required' => TRUE,
+  );
+  $form['ymw_submmission_new_not_published_mail']['ymw_submmission_new_not_published_mail_body'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Mail body'),
+    '#rows' => 10,
+    '#resizable' => TRUE,
+    '#attributes' => array('style' => 'height: auto;'),
+    '#default_value' => t(variable_get('webform_youmove__ymw_settings')['new_submission_not_published_mail_body']),
+    '#required' => TRUE,
+    '#translatable' => TRUE,
+  );
+  
+  $form['ymw_submmission_published_mail'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Campaign published mail'),
+    '#collapsible' => false,
+  );
+  $form['ymw_submmission_published_mail']['ymw_submmission_published_mail_subject'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mail subject'),
+    '#default_value' =>
+    variable_get('webform_youmove__ymw_settings')['submission_published_mail_subject'],
+    '#required' => TRUE,
+  );
+  $form['ymw_submmission_published_mail']['ymw_submmission_published_mail_body'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Mail body'),
+    '#rows' => 10,
+    '#resizable' => TRUE,
+    '#attributes' => array('style' => 'height: auto;'),
+    '#default_value' => t(variable_get('webform_youmove__ymw_settings')['submission_published_mail_body']),
     '#required' => TRUE,
     '#translatable' => TRUE,
   );
@@ -249,7 +310,15 @@ function _ymw_admin_settings_submit($form, $form_state) {
 
   $settings['submission_view_title'] = $form_state['values']['ymw_submission_view_title'];
   $settings['submission_edit_title'] = $form_state['values']['ymw_submission_edit_title'];
+  
+  $settings['registration_mail_subject'] = $form_state['values']['ymw_registration_mail_subject'];
   $settings['registration_mail_body'] = $form_state['values']['ymw_registration_mail_body'];
+  
+  $settings['new_submission_not_published_mail_subject'] = $form_state['values']['ymw_submmission_new_not_published_mail_subject'];
+  $settings['new_submission_not_published_mail_body'] = $form_state['values']['ymw_submmission_new_not_published_mail_body'];
+  
+  $settings['submission_published_mail_subject'] = $form_state['values']['ymw_submmission_published_mail_subject'];
+  $settings['submission_published_mail_body'] = $form_state['values']['ymw_submmission_published_mail_body'];
 
   variable_set('webform_youmove__ymw_user_dashboard_url', $form_state['values']['ymw_user_dashboard_url']);
   variable_set('webform_youmove__ymw_ID', $form_state['values']['ymw_ID']);

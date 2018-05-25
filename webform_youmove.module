@@ -121,9 +121,11 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
       watchdog('test-1.1',$submission->nid);
       watchdog('test-1.1',$submission->sid);
 
-      $submission_prev = webform_get_submission($submission->nid, $submission->sid);
+      module_load_include('inc', 'webform', 'includes/webform.submissions');
+      $submission_prev_arr = webform_get_submissions(array('nid' => $submission->nid,'sid' => $submission->sid));
+      $submission_prev = $submission_prev_arr[$submission->sid];
+
       watchdog('test-1.15',serialize($submission_prev));
-      //dpm($submission_prev);
       $submission_data_prev = drupout_params($node, $submission_prev);
       watchdog('test-1.2',implode($submission_data_prev));
       //dpm($submission_data_prev);
@@ -139,13 +141,13 @@ watchdog('test2',$submission_become_ready_to_publish);
 
     // Send mail for new petition and not published
     if($submission_is_new && !$submission_is_ready_to_publish) {
-
+       _mail('NEW_NOT_PUBLISHED_SUBMISSION',$node,$submission);
     }
 
     // Send mail for petition published
     if(($submission_is_new && $submission_is_ready_to_publish) ||
        (!$submission_is_new && $submission_become_ready_to_publish)) {
- 
+       _mail('PUBLISHED_SUBMISSION',$node,$submission); 
     }
 
   } else {
@@ -449,7 +451,7 @@ function _user_create($name,$mail_to,$passwd,$roles,$mail_body) {
 
     try {
       $account = user_save('', $fields);
-      $mail_subject = t('Congratulations').' '.$name.'! '.t('You have a account on').' youmove.';
+      $mail_subject = t($settings['registration_mail_subject'],array('[user:name]' => $name));
 
       drupal_mail('webform_youmove',
                   'webform_youmove_register',
@@ -583,6 +585,7 @@ function _submission_publish_func_access($type,$node,$submission) {
  * Callback of primary tabs link: 'Publish'
  * - set the 'ready to publish' submission field to true
  * - generate speakout link if empty
+ * - send mail
  * - redirect to speakout page
  */
 function _submission_publish_func_callback($type,$node,$submission) {
@@ -602,6 +605,7 @@ function _submission_publish_func_callback($type,$node,$submission) {
     }
 
     _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission);
+    _mail('PUBLISHED_SUBMISSION',$node,$submission);
     drupal_goto($link);
 
     return '';
@@ -647,4 +651,52 @@ function _remove_update_submission_msg($form, &$form_state) {
           drupal_set_message($msg,'status');
       }
    }
+}
+
+
+/**
+ * Send mail due to key
+ * - (key)'published_submission': mail after published campaign(submission)
+ * - (key)'new_not_published_submission': mail after new, not published campaign(submission)
+ */
+function _mail($key,$node,$submission) {
+  global $user;
+  global $language;
+
+  if($user && $language && $key) {
+    $mail_to = $user->mail;
+    $settings = variable_get('webform_youmove__ymw_settings');
+
+    switch ($key) {
+      case 'PUBLISHED_SUBMISSION':
+        $submission_data = drupout_params($node,$submission);
+        $title_ID = $settings['title_ID'];
+        $speakout_link_ID = $settings['speakout_link_ID'];
+        $link = $submission_data[$speakout_link_ID];
+
+        if (empty($link)) {
+          $title = $submission_data[$title_ID];
+          $link = _drupout_speakout_link($title);
+        }
+
+        $mail_body = t($settings['submission_published_mail_body'],array('[link:petition]' => $link));
+        $mail_subject = t($settings['submission_published_mail_subject']);
+        break;
+      case 'NEW_NOT_PUBLISHED_SUBMISSION':
+        $link = url(variable_get('webform_youmove__ymw_user_dashboard_url'), array('absolute' => TRUE, 'language' => $language));
+        $mail_body = t($settings['new_submission_not_published_mail_body'],array('[link:dashboard]' => $link));
+        $mail_subject = t($settings['new_submission_not_published_mail_subject']);
+        break;
+    }
+
+    drupal_mail(
+      'webform_youmove',
+      'webform_youmove_campaign',
+      $mail_to,
+      $language,
+      array('pre_mail_body' => $mail_body,
+            'subject' => $mail_subject),
+      variable_get('site_mail', 'noreply@example.com'));
+
+  }
 }
