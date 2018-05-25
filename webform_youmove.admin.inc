@@ -95,7 +95,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#title' => t('Webform language field key'),
     '#default_value' => variable_get('webform_youmove__ymw_settings')['language_ID'],
     '#required' => TRUE,
-  );  
+  );
    
   $form['ymw_user_data_fieldset_ID'] = array(
     '#type' => 'textfield',
@@ -125,6 +125,18 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Password field key'),
     '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_passwd_ID],
+    '#required' => TRUE,
+  );
+  $form['ymw_contact']['ymw_contact_firstname_ID'] = array(
+    '#type' => 'textfield',
+    '#title' => t('First name field key'),
+    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_firstname_ID],
+    '#required' => TRUE,
+  );
+  $form['ymw_contact']['ymw_contact_lastname_ID'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Lastname field key'),
+    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_lastname_ID],
     '#required' => TRUE,
   );
   

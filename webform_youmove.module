@@ -118,26 +118,16 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
 
     // Check previous value 'ready to publish' if not new submission
     if(!$submission_is_new) {
-      watchdog('test-1.1',$submission->nid);
-      watchdog('test-1.1',$submission->sid);
-
       module_load_include('inc', 'webform', 'includes/webform.submissions');
       $submission_prev_arr = webform_get_submissions(array('nid' => $submission->nid,'sid' => $submission->sid));
       $submission_prev = $submission_prev_arr[$submission->sid];
 
-      watchdog('test-1.15',serialize($submission_prev));
       $submission_data_prev = drupout_params($node, $submission_prev);
-      watchdog('test-1.2',implode($submission_data_prev));
-      //dpm($submission_data_prev);
       $submission_is_ready_to_publish_prev = _webform_youmove_ready_to_publish($submission_data_prev);
-      watchdog('test-1.3', $submission_is_ready_to_publish_prev);
       if(!$submission_is_ready_to_publish_prev && $submission_is_ready_to_publish){
         $submission_become_ready_to_publish = TRUE;
       }
     }
-watchdog('test0',$submission_is_new);
-watchdog('test1',$submission_is_ready_to_publish);
-watchdog('test2',$submission_become_ready_to_publish);
 
     // Send mail for new petition and not published
     if($submission_is_new && !$submission_is_ready_to_publish) {
@@ -162,7 +152,11 @@ watchdog('test2',$submission_become_ready_to_publish);
         $role = user_role_load_by_name($role_name);
         $rid = $role->rid;
       
-        $account = _user_create($user['name'], $user['mail'], $user['password'], array($rid =>$role_name), $settings['registration_mail_body']);
+        $account = _user_create($user['name'], 
+                                $user['mail'], 
+                                $user['password'], 
+                                array($rid =>$role_name),
+                                t($settings['registration_mail_body']));
         variable_del('webform_youmove_user_temp');
 
         // Set permission to the webform submission
