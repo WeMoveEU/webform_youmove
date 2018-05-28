@@ -379,7 +379,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           $passwd = $flat_values[$control_passwd_CID];
 
           //Check mail has proper format
-          $regex = '/^[a-zA-Z0-9_-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-]+$/';
+          $regex = '/^[a-zA-Z0-9._\-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-]+$/';
           if(!preg_match($regex,$mail)) {
               form_set_error('',t('Mail in wrong format.'));
           }
