@@ -315,6 +315,8 @@ function _ymw_admin_settings_submit($form, $form_state) {
   $settings['contact_fieldset_ID'] = $form_state['values']['ymw_contact_fieldset_ID'];
   $settings['contact_mail_ID'] = $form_state['values']['ymw_contact_mail_ID'];
   $settings['contact_passwd_ID'] = $form_state['values']['ymw_contact_passwd_ID'];
+  $settings['contact_firstname_ID'] = $form_state['values']['ymw_contact_firstname_ID'];
+  $settings['contact_lastname_ID'] = $form_state['values']['ymw_contact_lastname_ID'];
   
   $settings['login_fieldset_ID'] = $form_state['values']['ymw_login_fieldset_ID'];
   $settings['login_name_ID'] = $form_state['values']['ymw_login_name_ID'];

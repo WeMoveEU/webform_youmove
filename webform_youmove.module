@@ -151,11 +151,14 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
         $role_name = variable_get('webform_youmove__ymw_user_role_name');
         $role = user_role_load_by_name($role_name);
         $rid = $role->rid;
+        $mail_subject = t($settings['registration_mail_subject'],
+          array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
       
-        $account = _user_create($user['name'], 
+        $account = _user_create($user['name'],
                                 $user['mail'], 
                                 $user['password'], 
                                 array($rid =>$role_name),
+                                $mail_subject, 
                                 t($settings['registration_mail_body']));
         variable_del('webform_youmove_user_temp');
 
@@ -371,12 +374,19 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           //Get user contact controls
           $control_mail_ID = $settings['contact_mail_ID'];
           $control_passwd_ID = $settings['contact_passwd_ID'];
+          $control_firstname_ID = $settings['contact_firstname_ID'];
+          $control_lastname_ID = $settings['contact_lastname_ID'];
 
           $control_mail_CID = _get_cid($control_mail_ID,$node);
           $control_passwd_CID = _get_cid($control_passwd_ID,$node);
+          $control_firstname_CID = _get_cid($control_firstname_ID,$node);
+          $control_lastname_CID = _get_cid($control_lastname_ID,$node);
           
           $mail = $flat_values[$control_mail_CID];
           $passwd = $flat_values[$control_passwd_CID];
+          $firstname = $flat_values[$control_firstname_CID];
+          $lastname = $flat_values[$control_lastname_CID];
+   
 
           //Check mail has proper format
           $regex = '/^[a-zA-Z0-9._\-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-]+$/';
@@ -388,7 +398,12 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           if(!empty($mail) && (user_load_by_mail($mail) || user_load_by_name($mail))) {form_set_error('',t('Contact name already exists.'));}
 
           //Set temp user variable
-          variable_set('webform_youmove_user_temp',array('name'=>$mail,'mail'=>$mail,'password'=>$passwd));
+          variable_set('webform_youmove_user_temp',
+                       array('name'=>$mail,
+                             'firstname'=>$firstname,
+                             'lastname'=>$lastname, 
+                             'mail'=>$mail,
+                             'password'=>$passwd));
        
           _webform_set_redirect_page($form,'user');
 
@@ -426,7 +441,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
  *
  * Return: New user account
  */
-function _user_create($name,$mail_to,$passwd,$roles,$mail_body) {
+function _user_create($name,$mail_to,$passwd,$roles,$mail_subject,$mail_body) {
   $account = NULL;
 
   if(!empty($name) && !empty($mail_to)) {
@@ -445,15 +460,14 @@ function _user_create($name,$mail_to,$passwd,$roles,$mail_body) {
 
     try {
       $account = user_save('', $fields);
-      $mail_subject = t($settings['registration_mail_subject'],array('[user:name]' => $name));
 
       drupal_mail('webform_youmove',
                   'webform_youmove_register',
                   $mail_to,
                   $language,
                   array('account' => $account, 
-                      'pre_mail_body' => $mail_body,
-                      'subject' => $mail_subject),
+                        'pre_mail_body' => $mail_body,
+                        'subject' => strip_tags($mail_subject)),
                   variable_get('site_mail', 'noreply@example.com'));
 
       return $account;
@@ -661,25 +675,36 @@ function _mail($key,$node,$submission) {
     $mail_to = $user->mail;
     $settings = variable_get('webform_youmove__ymw_settings');
 
+    $user_civicrm = _civicrm_user_profile_get_contact($user->uid);
+    $user_civicrm_firstname = ($user_civicrm && array_key_exists('first_name',$user_civicrm)) ? $user_civicrm['first_name'] : '';
+    $user_civicrm_lastname = ($user_civicrm && array_key_exists('last_name',$user_civicrm)) ? $user_civicrm['last_name'] : '';
+
+
     switch ($key) {
       case 'PUBLISHED_SUBMISSION':
         $submission_data = drupout_params($node,$submission);
         $title_ID = $settings['title_ID'];
         $speakout_link_ID = $settings['speakout_link_ID'];
         $link = $submission_data[$speakout_link_ID];
-
+        
         if (empty($link)) {
           $title = $submission_data[$title_ID];
           $link = _drupout_speakout_link($title);
         }
 
-        $mail_body = t($settings['submission_published_mail_body'],array('[link:petition]' => $link));
-        $mail_subject = t($settings['submission_published_mail_subject']);
+        $mail_body = 
+        t($settings['submission_published_mail_body'],
+          array('[link:petition]' => $link));
+        $mail_subject =
+        t($settings['submission_published_mail_subject'],
+          array('[user:firstname]' => $user_civicrm_firstname,'[user:lastname]' => $user_civicrm_lastname));
+        
         break;
       case 'NEW_NOT_PUBLISHED_SUBMISSION':
         $link = url(variable_get('webform_youmove__ymw_user_dashboard_url'), array('absolute' => TRUE, 'language' => $language));
         $mail_body = t($settings['new_submission_not_published_mail_body'],array('[link:dashboard]' => $link));
-        $mail_subject = t($settings['new_submission_not_published_mail_subject']);
+        $mail_subject = t($settings['new_submission_not_published_mail_subject'],
+          array('[user:firstname]' => $user_civicrm_firstname,'[user:lastname]' => $user_civicrm_lastname));
         break;
     }
 
@@ -689,8 +714,36 @@ function _mail($key,$node,$submission) {
       $mail_to,
       $language,
       array('pre_mail_body' => $mail_body,
-            'subject' => $mail_subject),
+            'subject' => strip_tags($mail_subject)),
       variable_get('site_mail', 'noreply@example.com'));
 
   }
+}
+
+
+/**
+ * Retrieves a CiviCRM contact by Drupal user ID.
+ */
+function _civicrm_user_profile_get_contact($uid) {
+  $contacts = &drupal_static(__FUNCTION__);
+  if (isset($contacts[$uid])) {
+    return $contacts[$uid];
+  }
+  if (!isset($contacts)) {
+    $contacts = array();
+  }
+  $contacts[$uid] = FALSE;
+  civicrm_initialize();
+  require_once 'api/api.php';
+  $res = civicrm_api('uf_match', 'get', array('uf_id' => $uid, 'version' => 3));
+  if ($res['is_error'] || empty($res['id']) || empty($res['values'][$res['id']])) {
+    return FALSE;
+  }
+  $id = $res['values'][$res['id']]['contact_id'];
+  $res = civicrm_api('contact', 'get', array('contact_id' => $id, 'version' => 3));
+  if ($res['is_error']) {
+    return FALSE;
+  }
+  $contacts[$uid] = $res['values'][$res['id']];
+  return $contacts[$uid];
 }
