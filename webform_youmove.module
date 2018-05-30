@@ -389,7 +389,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
    
 
           //Check mail has proper format
-          $regex = '/^[a-zA-Z0-9._\-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-]+$/';
+          $regex = '/^[a-zA-Z0-9._\-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9._\-]+$/';
           if(!preg_match($regex,$mail)) {
               form_set_error('',t('Mail in wrong format.'));
           }
