@@ -387,7 +387,6 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           $firstname = $flat_values[$control_firstname_CID];
           $lastname = $flat_values[$control_lastname_CID];
    
-
           //Check mail has proper format
           $regex = '/^[a-zA-Z0-9._\-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9._\-]+$/';
           if(!preg_match($regex,$mail)) {
