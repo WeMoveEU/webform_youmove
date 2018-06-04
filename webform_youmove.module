@@ -6,7 +6,7 @@ require_once __DIR__ . '/webform_youmove.admin.inc';
 /**
  * Customize the campaign webform (new mode and edition/submission mode):
  * - (new mode and submission mode) If user already logged in hide webform fieldset related to the user
- * - (new mode) Set 'Language' field default value based on global variable 
+ * - (new mode) Set 'Language' field default value based on global variable
  * - (new mode) If user not logged in disable 'ready to publish' field
  * - (edition/submission mode) Set 'Cancel' button
  * - (edition/submission mode) Disable special fields according to the module settings
@@ -27,7 +27,7 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
   // If user already logged in
   // - hide webform fieldset related to the user
   if (user_is_logged_in()) {
-    $fieldset_id = $settings['user_data_fieldset_ID']; 
+    $fieldset_id = $settings['user_data_fieldset_ID'];
     _set_webform_component($fieldset_id, $form, '#access', FALSE);
 
     $fields_hidden = $settings['hidden_fields__user_logged'];
@@ -87,7 +87,7 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
          _set_webform_component($is_published_field_ID, $form,'#access',FALSE);
      } else {
        _webform_set_redirect_page($form,'[submission:url]');
-     } 
+     }
 
      //Set default value for 'Language' field
      global $language;
@@ -102,16 +102,18 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
  * Extra operation during the campaign submission presave (in DB):
  * - Create new user (submission owner) based on webform data
  *   (only for anonymous users - user not logged in)
- * - Send mails 
+ * - Send mails
  *   (only for logged in users)
  */
 function webform_youmove_webform_submission_presave($node,&$submission) {
-  
+  $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+  if ($node->nid != $ymw_ID) return;
+
   $settings = variable_get('webform_youmove__ymw_settings');
 
   if (user_is_logged_in()) {
     $submission_is_new = ($submission->sid) ? FALSE : TRUE;
-    
+
     $submission_data = drupout_params($node, $submission);
     $submission_is_ready_to_publish = _webform_youmove_ready_to_publish($submission_data);
     $submission_become_ready_to_publish = FALSE;
@@ -137,11 +139,11 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
     // Send mail for petition published
     if(($submission_is_new && $submission_is_ready_to_publish) ||
        (!$submission_is_new && $submission_become_ready_to_publish)) {
-       _mail('PUBLISHED_SUBMISSION',$node,$submission); 
+       _mail('PUBLISHED_SUBMISSION',$node,$submission);
     }
 
   } else {
-    
+
     $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
     $user = variable_get('webform_youmove_user_temp', NULL);
 
@@ -153,12 +155,12 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
         $rid = $role->rid;
         $mail_subject = t($settings['registration_mail_subject'],
           array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
-      
+
         $account = _user_create($user['name'],
-                                $user['mail'], 
-                                $user['password'], 
+                                $user['mail'],
+                                $user['password'],
                                 array($rid =>$role_name),
-                                $mail_subject, 
+                                $mail_subject,
                                 t($settings['registration_mail_body']));
         variable_del('webform_youmove_user_temp');
 
@@ -171,7 +173,7 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
       }
     }
   }
-  
+
 }
 
 
@@ -186,12 +188,12 @@ function webform_youmove_webform_submission_update($node, $submission) {
  */
 function webform_youmove_webform_submission_render_alter(&$renderable){
   $settings = variable_get('webform_youmove__ymw_settings');
-  
+
   //Reorder some elements
   $renderable['header']['#weight'] = 0;
   $renderable['header_for_not_published_submission']['#weight'] = 1;
   $renderable['add_an_image']['#weight'] = 2;
- 
+
   //Hide fields according to the module settings
   $fields = explode(',', variable_get('webform_youmove__ymw_settings')['hidden_fields']);
   foreach($fields as $field) {
@@ -239,12 +241,15 @@ function webform_youmove_menu_alter(&$items) {
  * - Redirect to the Speakout campaign for published campaigns
  */
 function webform_youmove_webform_submission_view_page($node, $submission, $format) {
+  $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+  if ($node->nid != $ymw_ID) return;
+
   $submission_data = drupout_params($node, $submission);
   $settings = variable_get('webform_youmove__ymw_settings');
 
   if (!_webform_youmove_ready_to_publish($submission_data)){
     $return_value = webform_submission_page($node, $submission, $format);
-    
+
     if (isset($settings['title_ID'])) {
       $title_key = $settings['title_ID'];
       $submission_title = $submission_data[$title_key];
@@ -267,6 +272,9 @@ function webform_youmove_webform_submission_view_page($node, $submission, $forma
  * - Set the title according to the module settings
  */
 function webform_youmove_webform_submission_edit_page($node, $submission, $format) {
+  $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+  if ($node->nid != $ymw_ID) return;
+
   $return_value = webform_submission_page($node, $submission, $format);
 
   $settings = variable_get('webform_youmove__ymw_settings');
@@ -287,11 +295,13 @@ function webform_youmove_webform_submission_edit_page($node, $submission, $forma
 
 /**
  * Customize new submission confirmation page:
- * - (anonymous user) Set the submission token 
+ * - (anonymous user) Set the submission token
  *   because normally webform submitted by anonymous user
  *   doesn't have the token and the text on confirmation page requires it
  */
 function webform_youmove_webform_confirmation_page_access($node) {
+   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
+   if ($node->nid != $ymw_ID) return;
 
    // Make sure SID is a positive integer.
    $sid = (!empty($_GET['sid']) && (int) $_GET['sid'] > 0) ? (int) $_GET['sid'] : NULL;
@@ -314,7 +324,7 @@ function webform_youmove_webform_confirmation_page_access($node) {
 
 
 /**
- * Webform handler that redirect the submission form 
+ * Webform handler that redirect the submission form
  * if user is logged in
  * and the submission is not published
  * This validation is used only with new submission mode
@@ -356,7 +366,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
    $flat_values = _webform_client_form_submit_flatten($node,$values);
 
    if ($values && $page_count && $page_count > 1) {
-      if(!array_key_exists($user_data__login__control_CID,$flat_values) && 
+      if(!array_key_exists($user_data__login__control_CID,$flat_values) &&
          !array_key_exists($user_data__contact__control_CID,$flat_values) ) {
          return;
       }
@@ -370,7 +380,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
       }
 
       if($sorter->componentVisibility($user_data__contact__control_component['cid'],$user_data__contact__control_component['page_num']) == WebformConditionals::componentShown){
-          
+
           //Get user contact controls
           $control_mail_ID = $settings['contact_mail_ID'];
           $control_passwd_ID = $settings['contact_passwd_ID'];
@@ -381,12 +391,12 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           $control_passwd_CID = _get_cid($control_passwd_ID,$node);
           $control_firstname_CID = _get_cid($control_firstname_ID,$node);
           $control_lastname_CID = _get_cid($control_lastname_ID,$node);
-          
+
           $mail = $flat_values[$control_mail_CID];
           $passwd = $flat_values[$control_passwd_CID];
           $firstname = $flat_values[$control_firstname_CID];
           $lastname = $flat_values[$control_lastname_CID];
-   
+
           //Check mail has proper format
           $regex = '/^[a-zA-Z0-9._\-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9._\-]+$/';
           if(!preg_match($regex,$mail)) {
@@ -400,14 +410,14 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           variable_set('webform_youmove_user_temp',
                        array('name'=>$mail,
                              'firstname'=>$firstname,
-                             'lastname'=>$lastname, 
+                             'lastname'=>$lastname,
                              'mail'=>$mail,
                              'password'=>$passwd));
-       
+
           _webform_set_redirect_page($form,'user');
 
       } elseif ($sorter->componentVisibility($user_data__login__control_component['cid'],$user_data__login__control_component['page_num']) == WebformConditionals::componentShown) {
-          
+
           //Get user login controls
           $control_name_ID = $settings['login_name_ID'];
           $control_password_ID = $settings['login_password_ID'];
@@ -428,7 +438,7 @@ function _ymw_user_data_validate(&$form, &$form_state) {
           } else {
               form_set_error('', t('Sorry, unrecognized username or password.'));
           }
-      } 
+      }
    }
 }
 
@@ -464,7 +474,7 @@ function _user_create($name,$mail_to,$passwd,$roles,$mail_subject,$mail_body) {
                   'webform_youmove_register',
                   $mail_to,
                   $language,
-                  array('account' => $account, 
+                  array('account' => $account,
                         'pre_mail_body' => $mail_body,
                         'subject' => strip_tags($mail_subject)),
                   variable_get('site_mail', 'noreply@example.com'));
@@ -582,7 +592,7 @@ function _set_value($key,$value,$webform_node,$webform_submission) {
  * Return: True/False
  */
 function _submission_publish_func_access($type,$node,$submission) {
-   
+
     $submission_data = drupout_params($node,$submission);
     return !_webform_youmove_ready_to_publish($submission_data);
 }
@@ -597,18 +607,18 @@ function _submission_publish_func_access($type,$node,$submission) {
  */
 function _submission_publish_func_callback($type,$node,$submission) {
     $submission_data = drupout_params($node,$submission);
-    
+
     $settings = variable_get('webform_youmove__ymw_settings');
     $title_ID = $settings['title_ID'];
     $is_published_field_ID = $settings['published_ID'];
     $is_published_field_positive_value = $settings['published_positive_value'];
-    $speakout_link_ID = $settings['speakout_link_ID']; 
-    $link = $submission_data[$speakout_link_ID]; 
+    $speakout_link_ID = $settings['speakout_link_ID'];
+    $link = $submission_data[$speakout_link_ID];
 
     if (empty($link)) {
-       $title = $submission_data[$title_ID]; 
+       $title = $submission_data[$title_ID];
        $link = _drupout_speakout_link($title);
-       _set_value($speakout_link_ID,$link,$node,$submission); 
+       _set_value($speakout_link_ID,$link,$node,$submission);
     }
 
     _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission);
@@ -647,7 +657,7 @@ function _webform_set_redirect_page($form,$redirect_url) {
 
 
 /**
- * Remove status messages: 'Submission updated.' 
+ * Remove status messages: 'Submission updated.'
  * from messages set by
  * 'drupal_set_messages' function
  */
@@ -685,19 +695,19 @@ function _mail($key,$node,$submission) {
         $title_ID = $settings['title_ID'];
         $speakout_link_ID = $settings['speakout_link_ID'];
         $link = $submission_data[$speakout_link_ID];
-        
+
         if (empty($link)) {
           $title = $submission_data[$title_ID];
           $link = _drupout_speakout_link($title);
         }
 
-        $mail_body = 
+        $mail_body =
         t($settings['submission_published_mail_body'],
           array('[link:petition]' => $link));
         $mail_subject =
         t($settings['submission_published_mail_subject'],
           array('[user:firstname]' => $user_civicrm_firstname,'[user:lastname]' => $user_civicrm_lastname));
-        
+
         break;
       case 'NEW_NOT_PUBLISHED_SUBMISSION':
         $link = url(variable_get('webform_youmove__ymw_user_dashboard_url'), array('absolute' => TRUE, 'language' => $language));
