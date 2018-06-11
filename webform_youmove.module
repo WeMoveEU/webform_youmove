@@ -154,14 +154,16 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
         $role = user_role_load_by_name($role_name);
         $rid = $role->rid;
         $mail_subject = t($settings['registration_mail_subject'],
-          array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
+                          array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
+        $mail_body = t($settings['registration_mail_body'],
+                       array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
 
         $account = _user_create($user['name'],
                                 $user['mail'],
                                 $user['password'],
                                 array($rid =>$role_name),
                                 $mail_subject,
-                                t($settings['registration_mail_body']));
+                                $mail_body);
         variable_del('webform_youmove_user_temp');
 
         // Set permission to the webform submission
@@ -229,9 +231,11 @@ function webform_youmove_mail($key, &$message, $params) {
  * - confirmation page (after new submission)
  */
 function webform_youmove_menu_alter(&$items) {
+  
   $items['node/%webform_menu/submission/%webform_menu_submission']['page callback'] = 'webform_youmove_webform_submission_view_page';
   $items['node/%webform_menu/submission/%webform_menu_submission/edit']['page callback'] = 'webform_youmove_webform_submission_edit_page';
   $items['node/%webform_menu/done']['access callback'] = 'webform_youmove_webform_confirmation_page_access';
+
 }
 
 
@@ -242,7 +246,7 @@ function webform_youmove_menu_alter(&$items) {
  */
 function webform_youmove_webform_submission_view_page($node, $submission, $format) {
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-  if ($node->nid != $ymw_ID) return;
+  if ($node->nid != $ymw_ID) return webform_submission_page();
 
   $submission_data = drupout_params($node, $submission);
   $settings = variable_get('webform_youmove__ymw_settings');
@@ -273,7 +277,7 @@ function webform_youmove_webform_submission_view_page($node, $submission, $forma
  */
 function webform_youmove_webform_submission_edit_page($node, $submission, $format) {
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-  if ($node->nid != $ymw_ID) return;
+  if ($node->nid != $ymw_ID) return webform_submission_page();
 
   $return_value = webform_submission_page($node, $submission, $format);
 
@@ -301,7 +305,7 @@ function webform_youmove_webform_submission_edit_page($node, $submission, $forma
  */
 function webform_youmove_webform_confirmation_page_access($node) {
    $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-   if ($node->nid != $ymw_ID) return;
+   if ($node->nid != $ymw_ID) return webform_confirmation_page_access();
 
    // Make sure SID is a positive integer.
    $sid = (!empty($_GET['sid']) && (int) $_GET['sid'] > 0) ? (int) $_GET['sid'] : NULL;
@@ -701,19 +705,24 @@ function _mail($key,$node,$submission) {
           $link = _drupout_speakout_link($title);
         }
 
-        $mail_body =
-        t($settings['submission_published_mail_body'],
-          array('[link:petition]' => $link));
-        $mail_subject =
-        t($settings['submission_published_mail_subject'],
-          array('[user:firstname]' => $user_civicrm_firstname,'[user:lastname]' => $user_civicrm_lastname));
+        $mail_body = t($settings['submission_published_mail_body'],
+                       array('[link:petition]' => $link, 
+                             '[user:firstname]' => $user_civicrm_firstname,
+                             '[user:lastname]' => $user_civicrm_lastname));
+        $mail_subject = t($settings['submission_published_mail_subject'],
+                          array('[user:firstname]' => $user_civicrm_firstname,
+                                '[user:lastname]' => $user_civicrm_lastname));
 
         break;
       case 'NEW_NOT_PUBLISHED_SUBMISSION':
         $link = url(variable_get('webform_youmove__ymw_user_dashboard_url'), array('absolute' => TRUE, 'language' => $language));
-        $mail_body = t($settings['new_submission_not_published_mail_body'],array('[link:dashboard]' => $link));
+        $mail_body = t($settings['new_submission_not_published_mail_body'],
+                       array('[link:dashboard]' => $link,
+                             '[user:firstname]' => $user_civicrm_firstname,
+                             '[user:lastname]' => $user_civicrm_lastname));
         $mail_subject = t($settings['new_submission_not_published_mail_subject'],
-          array('[user:firstname]' => $user_civicrm_firstname,'[user:lastname]' => $user_civicrm_lastname));
+                          array('[user:firstname]' => $user_civicrm_firstname,
+                                '[user:lastname]' => $user_civicrm_lastname));
         break;
     }
 
