@@ -698,17 +698,20 @@ function _mail($key,$node,$submission) {
         $submission_data = drupout_params($node,$submission);
         $title_ID = $settings['title_ID'];
         $speakout_link_ID = $settings['speakout_link_ID'];
-        $link = $submission_data[$speakout_link_ID];
+        $link_text = t('petition link');
+        $link = l($link_text,$submission_data[$speakout_link_ID]);
 
         if (empty($link)) {
           $title = $submission_data[$title_ID];
           $link = _drupout_speakout_link($title);
         }
 
-        $mail_body = t($settings['submission_published_mail_body'],
-                       array('[link:petition]' => $link, 
-                             '[user:firstname]' => $user_civicrm_firstname,
+        $mail_body_tmp = t($settings['submission_published_mail_body'],
+                       array('[user:firstname]' => $user_civicrm_firstname,
                              '[user:lastname]' => $user_civicrm_lastname));
+        // Replace without 'placeholder' html
+        $mail_body = str_replace('[link:petition]',$link,$mail_body_tmp);
+
         $mail_subject = t($settings['submission_published_mail_subject'],
                           array('[user:firstname]' => $user_civicrm_firstname,
                                 '[user:lastname]' => $user_civicrm_lastname));
