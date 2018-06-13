@@ -246,8 +246,8 @@ function webform_youmove_menu_alter(&$items) {
  */
 function webform_youmove_webform_submission_view_page($node, $submission, $format) {
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-  if ($node->nid != $ymw_ID) return webform_submission_page();
-
+  if ($node->nid != $ymw_ID) return webform_submission_page($node, $submission, $format);
+  
   $submission_data = drupout_params($node, $submission);
   $settings = variable_get('webform_youmove__ymw_settings');
 
@@ -277,8 +277,8 @@ function webform_youmove_webform_submission_view_page($node, $submission, $forma
  */
 function webform_youmove_webform_submission_edit_page($node, $submission, $format) {
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-  if ($node->nid != $ymw_ID) return webform_submission_page();
-
+  if ($node->nid != $ymw_ID) return webform_submission_page($node, $submission, $format);
+  
   $return_value = webform_submission_page($node, $submission, $format);
 
   $settings = variable_get('webform_youmove__ymw_settings');
@@ -305,8 +305,8 @@ function webform_youmove_webform_submission_edit_page($node, $submission, $forma
  */
 function webform_youmove_webform_confirmation_page_access($node) {
    $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
-   if ($node->nid != $ymw_ID) return webform_confirmation_page_access();
-
+   if ($node->nid != $ymw_ID) return webform_confirmation_page_access($node);
+  
    // Make sure SID is a positive integer.
    $sid = (!empty($_GET['sid']) && (int) $_GET['sid'] > 0) ? (int) $_GET['sid'] : NULL;
 
