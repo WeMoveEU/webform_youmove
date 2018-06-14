@@ -626,7 +626,7 @@ function _submission_publish_func_callback($type,$node,$submission) {
     }
 
     _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission);
-    _mail('PUBLISHED_SUBMISSION',$node,$submission);
+    //_mail('PUBLISHED_SUBMISSION',$node,$submission);
     drupal_goto($link);
 
     return '';
