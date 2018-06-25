@@ -153,10 +153,12 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
         $role_name = variable_get('webform_youmove__ymw_user_role_name');
         $role = user_role_load_by_name($role_name);
         $rid = $role->rid;
+ 
         $mail_subject = t($settings['registration_mail_subject'],
-                          array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
+                           array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));        
+
         $mail_body = t($settings['registration_mail_body'],
-                       array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
+                           array('[user:firstname]' => $user['firstname'],'[user:lastname]' => $user['lastname']));
 
         $account = _user_create($user['name'],
                                 $user['mail'],
@@ -475,11 +477,10 @@ function _user_create($name,$mail_to,$passwd,$roles,$mail_subject,$mail_body) {
       $account = user_save('', $fields);
 
       drupal_mail('webform_youmove',
-                  'webform_youmove_register',
+                  'webform_youmove_campaign',
                   $mail_to,
-                  $language,
-                  array('account' => $account,
-                        'pre_mail_body' => $mail_body,
+                  language_default(),
+                  array('pre_mail_body' => $mail_body,
                         'subject' => strip_tags($mail_subject)),
                   variable_get('site_mail', 'noreply@example.com'));
 
@@ -737,7 +738,7 @@ function _mail($key,$node,$submission) {
       'webform_youmove',
       'webform_youmove_campaign',
       $mail_to,
-      $language,
+      language_default(),
       array('pre_mail_body' => $mail_body,
             'subject' => strip_tags($mail_subject)),
       variable_get('site_mail', 'noreply@example.com'));
