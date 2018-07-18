@@ -100,10 +100,15 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
 
 /**
  * Extra operation during the campaign submission presave (in DB):
- * - Create new user (submission owner) based on webform data
- *   (only for anonymous users - user not logged in)
- * - Send mails
- *   (only for logged in users)
+ * - (only for anonymous users) 
+ * -- Create new user based on webform data and bind it to saved submission
+ * - (only for logged in users) 
+ * -- (for new submission)
+ * --- Bind logged in user
+ * --- Send mail if submission not published
+ * --- Send mail if submission published
+ * -- (for not new submission)
+ * --- Send mail if submission published
  */
 function webform_youmove_webform_submission_presave($node,&$submission) {
   $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
@@ -143,11 +148,9 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
     }
 
   } else {
-
-    $ymw_ID = variable_get('webform_youmove__ymw_ID', NULL);
     $user = variable_get('webform_youmove_user_temp', NULL);
 
-    if ($node->nid == $ymw_ID && !empty($user)) {
+    if (!empty($user)) {
       try {
         // Create the user from webform submission (with roles)
         $role_name = variable_get('webform_youmove__ymw_user_role_name');
