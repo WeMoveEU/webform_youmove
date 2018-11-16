@@ -101,7 +101,7 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Extra operation during the campaign submission presave (in DB):
  * - (only for anonymous users) 
- * -- Create new user based on webform data and bind it to saved submission
+ * -- Create new user based on webform data (hashed password) and bind it to saved submission
  * - (only for logged in users) 
  * -- (for new submission)
  * --- Bind logged in user
@@ -173,6 +173,20 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
 
         // Set permission to the webform submission
         $submission->uid = $account->uid;
+
+        // Coding user password and repassword field values for submission 
+        $password_field_ID = $settings['contact_passwd_ID'];
+        $repassword_field_ID = $settings['contact_repasswd_ID']; 
+        $submission_data = drupout_params($node, $submission);
+
+        $password = $submission_data[$password_field_ID];
+        require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+        $password_hash = user_hash_password($password);
+
+        if(!$password_hash) {throw new Exception('Unable to set password');}
+
+        _set_value($password_field_ID,$password_hash,$node,$submission,0);         
+        _set_value($repassword_field_ID,$password_hash,$node,$submission,0);
 
       } catch(Exception $e) {
         drupal_set_message(t('Some errors occured, please contact us'), 'error');
@@ -567,7 +581,7 @@ function _get_value($key,$webform_node,$webform_submission) {
 /**
  * Set submission value based on its webform
  */
-function _set_value($key,$value,$webform_node,$webform_submission) {
+function _set_value($key,$value,$webform_node,$webform_submission,$update) {
 
     $index_source_arr = $webform_node->webform['components'];
     $value_source_arr = $webform_submission->data;
@@ -582,7 +596,7 @@ function _set_value($key,$value,$webform_node,$webform_submission) {
     foreach ($value_source_arr as $index => $values) {
       if(($index == $field_key_index) && isset($values[0])) {
          $webform_submission->data[$index][0] = $value;
-         webform_submission_update($webform_node, $webform_submission);
+         if($update) {webform_submission_update($webform_node,$webform_submission);}
       }
     }
 
@@ -626,10 +640,10 @@ function _submission_publish_func_callback($type,$node,$submission) {
     if (empty($link)) {
        $title = $submission_data[$title_ID];
        $link = _drupout_speakout_link($title);
-       _set_value($speakout_link_ID,$link,$node,$submission);
+       _set_value($speakout_link_ID,$link,$node,$submission,1);
     }
 
-    _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission);
+    _set_value($is_published_field_ID,$is_published_field_positive_value,$node,$submission,1);
     //_mail('PUBLISHED_SUBMISSION',$node,$submission);
 
     //This has the side effect of clearing status messages, so that they don't show up
