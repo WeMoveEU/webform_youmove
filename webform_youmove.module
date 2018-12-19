@@ -97,6 +97,44 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
   }
 }
 
+/**
+ * Return the options list for translatable campaigns
+ * (= campaigns of current user that are not translations)
+ * The key of the option is the parent campaign id,
+ * since the goal is to assign the same parent to the current submission.
+ */
+function _webform_youmove_parent_options($component) {
+  if (!user_is_logged_in()) {
+    return NULL;
+  }
+
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  global $user;
+  $node = node_load($component['nid']);
+  $submissions = webform_get_submissions(array('nid' => $node->nid, 'uid' => $user->uid));
+  $parents = array();
+  foreach ($submissions as $sid => $submission) {
+    $sub_params = drupout_params($node, $submission);
+    if ($sub_params['is_translation'] != '1' && $sub_params['parent_campaign_id']) {
+      $parents[$sub_params['parent_campaign_id']] = $sub_params['civicrm_1_activity_1_activity_subject'];
+    }
+  }
+  return $parents;
+}
+
+/**
+ * Add custom dynamic select options list
+  */
+function webform_youmove_webform_select_options_info() {
+  $items = array();
+
+  $items['youmove_translatable_petitions'] = array(
+    'title' => t('Translatable petitions'),
+    'options callback' => '_webform_youmove_parent_options',
+  );
+
+  return $items;
+}
 
 /**
  * Extra operation during the campaign submission presave (in DB):
