@@ -94,6 +94,15 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
      if($language->language) {
        _set_webform_component($settings['language_ID'],$form,'#default_value',$language->language);
      }
+
+     //Disable translation option if no translatable campaign
+     $node = $form['#node'];
+     $parent_cid = _get_cid('parent_campaign_id', $node);
+     $parent_component = $node->webform['components'][$parent_cid];
+     $parents = _webform_youmove_parent_options($parent_component);
+     if (!$parents) {
+       _set_webform_component('is_translation', $form, '#access', FALSE);
+     }
   }
 }
 
