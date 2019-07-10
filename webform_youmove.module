@@ -24,6 +24,9 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
 
   // NEW and EDITION/SUBMISSION MODE
 
+  // Set validation of translation options
+  $form['#validate'][] = '_ymw_translation_validate';
+
   // If user already logged in
   // - hide webform fieldset related to the user
   if (user_is_logged_in()) {
@@ -409,6 +412,31 @@ function _ymw_redirect_to_submission_view_page(&$form, &$form_state){
   }
 }
 
+/**
+ * Webform validation handler to check that no translation has already been submitted in the same language
+ */
+function _ymw_translation_validate(&$form, &$form_state) {
+  $node = $form['#node'];
+
+  // Check if translation value exists on current (multistep form) page
+  $submitted = isset($form_state['values']['submitted']) ? $form_state['values']['submitted'] : NULL;
+  if (!$submitted || !array_key_exists('other_data', $submitted)) { return; }
+
+  $other_data = $submitted['other_data'];
+  if (array_key_exists('parent_campaign_id', $other_data) && $other_data['parent_campaign_id']) {
+    // Check if there is already a submission with same parent and same language
+    global $user;
+    $parent_campaign_id = $other_data['parent_campaign_id'];
+    $campaign_language = $other_data['language'];
+    $submissions = webform_get_submissions(array('nid' => $node->nid, 'uid' => $user->uid));
+    foreach ($submissions as $sid => $submission) {
+      $sub_params = drupout_params($node, $submission);
+      if ($sub_params['language'] == $campaign_language && $sub_params['parent_campaign_id'] == $parent_campaign_id) {
+        form_set_error('language', t('You have already submitted a translation in this language.'));
+      }
+    }
+  }
+}
 
 /**
  * Webform validation handler to validate against 2 user data controls
@@ -760,7 +788,6 @@ function _mail($key,$node,$submission) {
     $user_civicrm = _civicrm_user_profile_get_contact($user->uid);
     $user_civicrm_firstname = ($user_civicrm && array_key_exists('first_name',$user_civicrm)) ? $user_civicrm['first_name'] : '';
     $user_civicrm_lastname = ($user_civicrm && array_key_exists('last_name',$user_civicrm)) ? $user_civicrm['last_name'] : '';
-
 
     switch ($key) {
       case 'PUBLISHED_SUBMISSION':
