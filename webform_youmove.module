@@ -62,15 +62,21 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
 
     $submission_data = drupout_params($form['#node'],$form['#submission']);
 
-    // Get disabled fields
-    // depending on the 'ready to publish' value
-    $fields_disabled = (_webform_youmove_ready_to_publish($submission_data)) ?
-    variable_get('webform_youmove__ymw_settings')['disabled_fields__published'] : variable_get('webform_youmove__ymw_settings')['disabled_fields'];
-    $fields_disabled_arr = explode(',',$fields_disabled);
+    // Disabling fields
+    $admin_role_name = variable_get('webform_youmove__ymw_settings')['fields__admin_role'];
+    $admin_role = user_role_load_by_name($admin_role_name);
 
-    // Disabled fields
-    foreach ($fields_disabled_arr as $field) {
-      _set_webform_component($field,$form,'#attributes',array('disabled' => '1'));
+    if(!user_has_role($admin_role->rid)) {
+      // Get disabled fields
+      // depending on the 'ready to publish' value
+      $fields_disabled = (_webform_youmove_ready_to_publish($submission_data)) ?
+      variable_get('webform_youmove__ymw_settings')['disabled_fields__published'] : variable_get('webform_youmove__ymw_settings')['disabled_fields'];
+      $fields_disabled_arr = explode(',',$fields_disabled);
+
+      // Disabled fields
+      foreach ($fields_disabled_arr as $field) {
+        _set_webform_component($field,$form,'#attributes',array('disabled' => '1'));
+      }
     }
 
     // Disable the 'ready to publish' field if already set to positive value
