@@ -63,7 +63,7 @@ function webform_youmove_form_alter(&$form, &$form_state, $form_id) {
     $submission_data = drupout_params($form['#node'],$form['#submission']);
 
     // Disabling fields
-    $admin_role_name = variable_get('webform_youmove__ymw_settings')['fields__admin_role'];
+    $admin_role_name = variable_get('webform_youmove__ymw_admin_role_name');
     $admin_role = user_role_load_by_name($admin_role_name);
 
     if(!user_has_role($admin_role->rid)) {

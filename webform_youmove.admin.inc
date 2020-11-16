@@ -58,6 +58,13 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#default_value' => variable_get('webform_youmove__ymw_user_role_name'),
     '#required' => TRUE,
   );
+  $form['ymw_admin_role_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Webform admin role'),
+    '#default_value' => variable_get('webform_youmove__ymw_admin_role_name'),
+    '#required' => TRUE,
+    '#description' => t('User role (key) for administer fields e.g. that user can edit disabled fields'),
+  );
   $form['ymw_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Webform ID'),
@@ -188,13 +195,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#description' => t('Field keys, separated by commas'),
   );
   
-  $form['ymw_fields__admin_role'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Webform field admin role'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')['fields__admin_role'],
-    '#required' => TRUE,
-    '#description' => t('User role (key) for administer fields e.g. that user can edit disabled fields'),
-  );
+  
 
   $form['ymw_hidden_fields'] = array(
     '#type' => 'textarea',
@@ -314,7 +315,6 @@ function _ymw_admin_settings_submit($form, $form_state) {
   $form_components = variable_get('webform_youmove__ymw_components',null);
   $settings = array();
 
-  $settings['fields__admin_role'] =  $form_state['values']['ymw_fields__admin_role'];
   $settings['disabled_fields'] =  $form_state['values']['ymw_disabled_fields'];
   $settings['disabled_fields__published'] = $form_state['values']['ymw_disabled_fields__published'];
   $settings['hidden_fields'] =  $form_state['values']['ymw_hidden_fields'];
@@ -353,5 +353,6 @@ function _ymw_admin_settings_submit($form, $form_state) {
   variable_set('webform_youmove__ymw_user_dashboard_url', $form_state['values']['ymw_user_dashboard_url']);
   variable_set('webform_youmove__ymw_ID', $form_state['values']['ymw_ID']);
   variable_set('webform_youmove__ymw_user_role_name', $form_state['values']['ymw_user_role_name']);
+  variable_set('webform_youmove__ymw_admin_role_name', $form_state['values']['ymw_admin_role_name']);
   variable_set('webform_youmove__ymw_settings',$settings);
 }
