@@ -24,7 +24,7 @@ function webform_youmove_menu() {
         'attributes' => array(
           'class' => array('link-publish')
         )
-      ), 
+      ),
   );
   $items['node/%webform_menu/submission/%webform_menu_submission/edit/publish'] = array(
       'title' => t('Publish'),
@@ -103,7 +103,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#default_value' => variable_get('webform_youmove__ymw_settings')['language_ID'],
     '#required' => TRUE,
   );
-   
+
   $form['ymw_user_data_fieldset_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Webform user data fieldset key'),
@@ -119,40 +119,40 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
   $form['ymw_contact']['ymw_contact_fieldset_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Fieldset key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_fieldset_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['contact_fieldset_ID'],
     '#required' => TRUE,
   );
   $form['ymw_contact']['ymw_contact_mail_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Mail field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_mail_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['contact_mail_ID'],
     '#required' => TRUE,
   );
   $form['ymw_contact']['ymw_contact_passwd_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Password field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_passwd_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['contact_passwd_ID'],
     '#required' => TRUE,
   );
   $form['ymw_contact']['ymw_contact_repasswd_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('RePassword field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_repasswd_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['contact_repasswd_ID'],
     '#required' => TRUE,
   );
   $form['ymw_contact']['ymw_contact_firstname_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('First name field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_firstname_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['contact_firstname_ID'],
     '#required' => TRUE,
   );
   $form['ymw_contact']['ymw_contact_lastname_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Lastname field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[contact_lastname_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['contact_lastname_ID'],
     '#required' => TRUE,
   );
-  
+
 
   $form['ymw_login'] = array(
     '#type' => 'fieldset',
@@ -162,22 +162,22 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
   $form['ymw_login']['ymw_login_fieldset_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Fieldset key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[login_fieldset_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['login_fieldset_ID'],
     '#required' => TRUE,
   );
   $form['ymw_login']['ymw_login_name_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Name field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[login_name_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['login_name_ID'],
     '#required' => TRUE,
   );
   $form['ymw_login']['ymw_login_password_ID'] = array(
     '#type' => 'textfield',
     '#title' => t('Password field key'),
-    '#default_value' => variable_get('webform_youmove__ymw_settings')[login_password_ID],
+    '#default_value' => variable_get('webform_youmove__ymw_settings')['login_password_ID'],
     '#required' => TRUE,
   );
-    
+
 
   $form['ymw_disabled_fields'] = array(
     '#type' => 'textarea',
@@ -186,7 +186,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#description' => t('Field keys, separated by commas'),
   );
-  
+
   $form['ymw_disabled_fields__published'] = array(
     '#type' => 'textarea',
     '#title' => t('Webform submission disabled fields (edition) (PUBLISHED)'),
@@ -194,8 +194,8 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#description' => t('Field keys, separated by commas'),
   );
-  
-  
+
+
 
   $form['ymw_hidden_fields'] = array(
     '#type' => 'textarea',
@@ -217,8 +217,8 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#default_value' => variable_get('webform_youmove__ymw_settings')['hidden_fields__user_not_logged'],
     '#required' => TRUE,
     '#description' => t('Field keys, separated by commas'),
-  );  
-  
+  );
+
   $form['ymw_submission_view_title'] = array(
     '#type' => 'textfield',
     '#title' => t('Webform submission viewed title'),
@@ -259,7 +259,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#translatable' => TRUE,
   );
-  
+
   $form['ymw_submmission_new_not_published_mail'] = array(
     '#type' => 'fieldset',
     '#title' => t('New campaign not published mail'),
@@ -282,7 +282,7 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
     '#required' => TRUE,
     '#translatable' => TRUE,
   );
-  
+
   $form['ymw_submmission_published_mail'] = array(
     '#type' => 'fieldset',
     '#title' => t('Campaign published mail'),
@@ -325,7 +325,7 @@ function _ymw_admin_settings_submit($form, $form_state) {
   $settings['language_ID'] =  $form_state['values']['ymw_language_ID'];
   $settings['speakout_link_ID'] =  $form_state['values']['ymw_speakout_link_ID'];
   $settings['title_ID'] =  $form_state['values']['ymw_title_ID'];
-  $settings['user_data_fieldset_ID'] =  $form_state['values']['ymw_user_data_fieldset_ID']; 
+  $settings['user_data_fieldset_ID'] =  $form_state['values']['ymw_user_data_fieldset_ID'];
 
   $settings['contact_fieldset_ID'] = $form_state['values']['ymw_contact_fieldset_ID'];
   $settings['contact_mail_ID'] = $form_state['values']['ymw_contact_mail_ID'];
@@ -333,20 +333,20 @@ function _ymw_admin_settings_submit($form, $form_state) {
   $settings['contact_repasswd_ID'] = $form_state['values']['ymw_contact_repasswd_ID'];
   $settings['contact_firstname_ID'] = $form_state['values']['ymw_contact_firstname_ID'];
   $settings['contact_lastname_ID'] = $form_state['values']['ymw_contact_lastname_ID'];
-  
+
   $settings['login_fieldset_ID'] = $form_state['values']['ymw_login_fieldset_ID'];
   $settings['login_name_ID'] = $form_state['values']['ymw_login_name_ID'];
   $settings['login_password_ID'] = $form_state['values']['ymw_login_password_ID'];
 
   $settings['submission_view_title'] = $form_state['values']['ymw_submission_view_title'];
   $settings['submission_edit_title'] = $form_state['values']['ymw_submission_edit_title'];
-  
+
   $settings['registration_mail_subject'] = $form_state['values']['ymw_registration_mail_subject'];
   $settings['registration_mail_body'] = $form_state['values']['ymw_registration_mail_body'];
-  
+
   $settings['new_submission_not_published_mail_subject'] = $form_state['values']['ymw_submmission_new_not_published_mail_subject'];
   $settings['new_submission_not_published_mail_body'] = $form_state['values']['ymw_submmission_new_not_published_mail_body'];
-  
+
   $settings['submission_published_mail_subject'] = $form_state['values']['ymw_submmission_published_mail_subject'];
   $settings['submission_published_mail_body'] = $form_state['values']['ymw_submmission_published_mail_body'];
 
