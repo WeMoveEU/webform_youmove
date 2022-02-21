@@ -156,9 +156,9 @@ function webform_youmove_webform_select_options_info() {
 
 /**
  * Extra operation during the campaign submission presave (in DB):
- * - (only for anonymous users) 
+ * - (only for anonymous users)
  * -- Create new user based on webform data (hashed password) and bind it to saved submission
- * - (only for logged in users) 
+ * - (only for logged in users)
  * -- (for new submission)
  * --- Bind logged in user
  * --- Send mail if submission not published
@@ -212,9 +212,9 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
         $role_name = variable_get('webform_youmove__ymw_user_role_name');
         $role = user_role_load_by_name($role_name);
         $rid = $role->rid;
- 
+
         $mail_subject = t($settings['registration_mail_subject'],
-                           array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));        
+                           array('[user:firstname]' => $user['firstname'], '[user:lastname]' => $user['lastname']));
 
         $mail_body = t($settings['registration_mail_body'],
                            array('[user:firstname]' => $user['firstname'],'[user:lastname]' => $user['lastname']));
@@ -230,9 +230,9 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
         // Set permission to the webform submission
         $submission->uid = $account->uid;
 
-        // Coding user password and repassword field values for submission 
+        // Coding user password and repassword field values for submission
         $password_field_ID = $settings['contact_passwd_ID'];
-        $repassword_field_ID = $settings['contact_repasswd_ID']; 
+        $repassword_field_ID = $settings['contact_repasswd_ID'];
         $submission_data = drupout_params($node, $submission);
 
         $password = $submission_data[$password_field_ID];
@@ -241,7 +241,7 @@ function webform_youmove_webform_submission_presave($node,&$submission) {
 
         if(!$password_hash) {throw new Exception('Unable to set password');}
 
-        _set_value($password_field_ID,$password_hash,$node,$submission,0);         
+        _set_value($password_field_ID,$password_hash,$node,$submission,0);
         _set_value($repassword_field_ID,$password_hash,$node,$submission,0);
 
       } catch(Exception $e) {
@@ -326,7 +326,7 @@ function webform_youmove_webform_submission_view_page($node, $submission, $forma
   $submission_data = drupout_params($node, $submission);
   $settings = variable_get('webform_youmove__ymw_settings');
 
-  if (!_webform_youmove_ready_to_publish($submission_data)){
+  if (!_webform_youmove_ready_to_publish($submission_data) || empty($submission_data['speakout_link'])){
     $return_value = webform_submission_page($node, $submission, $format);
 
     if (isset($settings['title_ID'])) {
@@ -341,8 +341,9 @@ function webform_youmove_webform_submission_view_page($node, $submission, $forma
     return $return_value;
   }
 
-  if(isset($submission_data['speakout_link'])) {drupal_goto($submission_data['speakout_link']);}
-
+  if (!empty($submission_data['speakout_link'])) {
+    drupal_goto($submission_data['speakout_link']);
+  }
 }
 
 
