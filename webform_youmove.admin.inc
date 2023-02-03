@@ -237,6 +237,14 @@ function webform_youmove_admin_settings_form($form, &$form_state) {
 
   // MAILS
 
+  $form['ymw_email_sender'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email sender'),
+    '#default_value' =>
+    variable_get('webform_youmove__ymw_settings')['email_sender'],
+    '#required' => TRUE,
+  );
+
   $form['ymw_registration_mail'] = array(
     '#type' => 'fieldset',
     '#title' => t('Registration mail for new user creation (during campaign submission)'),
@@ -340,6 +348,8 @@ function _ymw_admin_settings_submit($form, $form_state) {
 
   $settings['submission_view_title'] = $form_state['values']['ymw_submission_view_title'];
   $settings['submission_edit_title'] = $form_state['values']['ymw_submission_edit_title'];
+
+  $settings['email_sender'] = $form_state['values']['ymw_email_sender'];
 
   $settings['registration_mail_subject'] = $form_state['values']['ymw_registration_mail_subject'];
   $settings['registration_mail_body'] = $form_state['values']['ymw_registration_mail_body'];
